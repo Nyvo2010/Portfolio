@@ -1,144 +1,338 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nyvo Portfolio</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+    <title>Portfolio — Nyvo</title>
+    <link rel="icon" href="assets/Website-Logo.png" type="image/png">
+    <link rel="stylesheet" href="styles.css">
+    <script src="posts.js"></script>
 </head>
+
 <body>
-    <div class="preloader">
-        <div class="preloader-content">
-            <span class="preloader-text">Nyvo is a dev.</span>
-            <span class="material-symbols-rounded preloader-icon inline-icon" aria-hidden="true">asterisk</span>
-        </div>
-    </div>
     <div class="cursor-dot" data-cursor-dot></div>
     <div class="cursor-outline" data-cursor-outline></div>
+    <header id="top-header">
+        <span>Nyvo is a dev.</span>
+        <nav>
+            <div id="btn-header-about"></div>
+            <div id="btn-header-projects"></div>
+            <div id="btn-header-contact"></div>
+        </nav>
+        <button class="hamburger" aria-label="Open menu" aria-expanded="false">
+            <span class="hamburger-lines"></span>
+        </button>
+    </header>
 
-    <main>
-        <section id="home" class="page-section hero active">
-            <h1>
-                <span class="hero-line"><span class="highlight">Nyvo</span></span><br>
-                <span class="hero-line">is a</span><br>
-                <span class="hero-line">dev.<span class="material-symbols-outlined" aria-hidden="true">deployed_code</span></span>
-            </h1>
+    <section id="hero">
+        <h1>Nyvo<br>is a<br>Dev.</h1>
+        <a class="hero-scroll-indicator" href="#philosophy" aria-label="Scroll down to see more">
+            <span class="scroll-text">scroll down ↓</span>
+        </a>
+    </section>
 
-            <div class="scroll-indicator">
-                <span class="indicator-text">scroll down</span>
-                <span class="material-symbols-rounded indicator-arrow" aria-hidden="true">keyboard_double_arrow_down</span>
+    <div class="section-divider"></div>
+
+    <section id="philosophy">
+        <h2 class="philosophy-quote">"The unexamined life is not worth living"<br><span class="quote-attribution">—
+                Socrates</span></h2>
+    </section>
+
+    <div class="section-divider"></div>
+
+    <section id="projects">
+        <h2>Selected Works</h2>
+        <div class="selected-scroller" id="selected-scroller">
+            <div class="scroller-track">
+                <article class="work-card">
+                    <a class="card-media" href="post.html?project=atlas"><img src="assets/Atlas-Mockup.png"
+                            alt="Atlas project screenshot"></a>
+                    <div id="btn-work-atlas" class="work-button-placeholder" data-project="atlas"></div>
+                </article>
+                <article class="work-card">
+                    <a class="card-media" href="post.html?project=sizzle"><img src="assets/Sizzle-Mockup.png"
+                            alt="Sizzle project screenshot"></a>
+                    <div id="btn-work-sizzle" class="work-button-placeholder" data-project="sizzle"></div>
+                </article>
+                <article class="work-card">
+                    <a class="card-media" href="post.html?project=glidr"><img src="assets/Glidr-Mockup.png"
+                            alt="Glidr project screenshot"></a>
+                    <div id="btn-work-glidr" class="work-button-placeholder" data-project="glidr"></div>
+                </article>
             </div>
-        </section>
+        </div>
+    </section>
 
-        <section id="quote" class="page-section quote-section">
-            <div class="quote-wrapper">
-                <p class="quote-text">
-                    <span class="quote-sentence">
-                        <span class="highlight">Minimalism</span> <span>isn't the absence of elements.</span>
-                    </span>
-                    <span class="quote-sentence">
-                        <span>It's the </span><span class="highlight">perfection of the essential.</span><span class="material-symbols-rounded icon inline-icon" aria-hidden="true">asterisk</span>
-                    </span>
-                </p>
-            </div> 
-        </section>
-
-        <section id="about" class="page-section about-section">
-            <div class="section-container">
-            <h2 class="section-heading">
-                <span class="heading-line">About</span>
-                <span class="heading-line heading-main"><span class="highlight">Me</span> <span class="section-icon material-symbols-outlined inline-icon">person</span></span>
-            </h2>
-            
-            <div class="about-content">
-                <p class="about-text">
-                    <span>I focus on </span><span class="highlight">systems thinking</span><span>: deliberately </span><span class="highlight">breaking things</span><span>, tracing failure paths, and rebuilding them to be </span><span class="highlight">robust</span><span>.</span>
-                </p>
-
-                <p class="about-text">
-                    <span>I </span><span class="highlight">build full-stack projects</span><span> from scratch, iterate fast, and automate the boring parts to maximize </span><span class="highlight">reliability and clarity</span><span>.</span>
-                </p>
-
-                <p class="about-text">
-                    <span>I'm drawn to </span><span class="highlight">edge cases</span><span>, long-running processes, and systems that keep working when nobody is watching.</span>
-                </p>
-
-                <p class="about-text">
-                    <span>“The </span><span class="highlight">unexamined</span><span> life is not worth living” — Socrates</span>
-                </p>
+    <footer id="contact">
+        <div class="section-divider footer-divider"></div>
+        <div class="footer-top">
+            <div class="footer-brand">
+                Nyvo<br>is a<br>Dev.
+                <span class="footer-copyright">&copy; 2025 All rights reserved.</span>
             </div>
-            </div>
-        </section>
-
-        <section id="works" class="page-section works-section">
-            <div class="section-container">
-                <h2 class="section-heading">
-                    <span class="heading-line">Selected</span>
-                    <span class="heading-line heading-main"><span class="highlight">Works</span><span class="section-icon material-symbols-outlined inline-icon">science</span></span>
-                </h2>
-
-                <div class="works-list">
-                    <div class="work-item">
-                        <div class="work-item-content">
-                            <span class="work-item-text">Atlas AI</span>
-                            <a class="work-item-more" href="https://github.com/Nyvo2010/Atlas-Agent-v4" target="_blank" rel="noopener">View on GitHub <span class="material-symbols-rounded work-item-icon inline-icon" aria-hidden="true">arrow_forward</span></a>
-                        </div>
+            <div class="footer-info">
+                <div class="footer-column">
+                    <span class="column-title">Contact</span>
+                    <div class="footer-links">
+                        <div id="btn-footer-email"></div>
+                        <div id="btn-footer-github"></div>
+                        <div id="btn-footer-linkedin"></div>
                     </div>
-                    <div class="work-item">
-                        <div class="work-item-content">
-                            <span class="work-item-text">Sizzle</span>
-                            <a class="work-item-more" href="https://github.com/SizzleDevs/Sizzle_webapp" target="_blank" rel="noopener">View on GitHub <span class="material-symbols-rounded work-item-icon inline-icon" aria-hidden="true">arrow_forward</span></a>
-                        </div>
-                    </div>
-                    <div class="work-item">
-                        <div class="work-item-content">
-                            <span class="work-item-text">Glidr browser</span>
-                            <a class="work-item-more" href="https://github.com/Nyvo2010/Glidr_Browser" target="_blank" rel="noopener">View on GitHub <span class="material-symbols-rounded work-item-icon inline-icon" aria-hidden="true">arrow_forward</span></a>
-                        </div>
+                </div>
+                <div class="footer-column">
+                    <span class="column-title">Pages</span>
+                    <div class="footer-links">
+                        <div id="btn-footer-about"></div>
+                        <div id="btn-footer-projects"></div>
+                        <div id="btn-footer-contact"></div>
                     </div>
                 </div>
             </div>
-        </section>
-
-        <section id="contact" class="page-section contact-section">
-            <div class="section-container">
-                <h2 class="section-heading">
-                    <span class="heading-line">Get in</span>
-                    <span class="heading-line heading-main"><span class="highlight">Touch</span> <span class="section-icon material-symbols-outlined inline-icon">mail</span></span>
-                </h2>
-
-                <div class="works-list contact-list">
-                    <div class="work-item contact-item">
-                        <div class="work-item-content">
-                            <span class="work-item-text">Email</span>
-                            <a class="work-item-more" href="mailto:niekyuwen@gmail.com">Open in Email <span class="material-symbols-rounded work-item-icon inline-icon" aria-hidden="true">arrow_forward</span></a>
-                        </div>
-                    </div>
-                    <div class="work-item contact-item">
-                        <div class="work-item-content">
-                            <span class="work-item-text">GitHub</span>
-                            <a class="work-item-more" href="https://github.com/Nyvo2010" target="_blank" rel="noopener">Open in GitHub <span class="material-symbols-rounded work-item-icon inline-icon" aria-hidden="true">arrow_forward</span></a>
-                        </div>
-                    </div>
-                    <div class="work-item contact-item">
-                        <div class="work-item-content">
-                            <span class="work-item-text">LinkedIn</span>
-                            <a class="work-item-more" href="https://www.linkedin.com/in/niek-vogelaar-271222392/" target="_blank" rel="noopener">Open in LinkedIn <span class="material-symbols-rounded work-item-icon inline-icon" aria-hidden="true">arrow_forward</span></a>
-                        </div>
-                    </div>
-                </div>
+        </div>
+        <div class="footer-bottom">
+            <div class="contact-button-large">
+                <div id="btn-contact-getintouch"></div>
             </div>
-        </section>
+        </div>
+    </footer>
 
-    </main>
-
-    <script src="https://unpkg.com/@studio-freight/lenis@1.0.42/dist/lenis.min.js"></script>
     <script src="script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const btnAbout = createTextReveal({
+                topText: 'About me',
+                bottomText: 'About me',
+                fontSize: '1.5rem',
+                fontWeight: '500',
+                textColor: '#1A1A1A',
+                link: 'post.html?project=about'
+            });
+            document.getElementById('btn-header-about').appendChild(btnAbout);
+
+            const btnProjects = createTextReveal({
+                topText: 'Projects',
+                bottomText: 'Projects',
+                fontSize: '1.5rem',
+                fontWeight: '500',
+                textColor: '#1A1A1A',
+                link: '#projects'
+            });
+            document.getElementById('btn-header-projects').appendChild(btnProjects);
+
+            const btnContact = createTextReveal({
+                topText: 'Contact',
+                bottomText: 'Contact',
+                fontSize: '1.5rem',
+                fontWeight: '500',
+                textColor: '#1A1A1A',
+                link: '#contact'
+            });
+            document.getElementById('btn-header-contact').appendChild(btnContact);
+
+            const scrollerContainer = document.querySelector('.selected-scroller');
+            const scrollerTrack = scrollerContainer ? scrollerContainer.querySelector('.scroller-track') : null;
+            if (scrollerContainer && scrollerTrack) {
+                const container = scrollerContainer;
+                const scrollerSlugs = ['atlas', 'sizzle', 'glidr'];
+                const allPosts = window.postsData || [];
+                const projects = scrollerSlugs.map(slug => allPosts.find(p => p.slug === slug)).filter(Boolean);
+
+                scrollerTrack.innerHTML = '';
+
+                const createCard = (project) => {
+                    const art = document.createElement('article');
+                    art.className = 'work-card';
+
+                    const linkMedia = document.createElement('a');
+                    linkMedia.className = 'card-media';
+                    linkMedia.href = `post.html?project=${project.slug}`;
+
+                    const img = document.createElement('img');
+                    img.src = project.thumbnail || project.heroImage;
+                    img.alt = (project.shortTitle || project.title) + ' screenshot';
+                    linkMedia.appendChild(img);
+
+                    const btnHost = document.createElement('div');
+                    btnHost.className = 'work-button-placeholder';
+                    btnHost.dataset.slug = project.slug;
+                    btnHost.dataset.title = project.shortTitle || project.title;
+
+                    art.appendChild(linkMedia);
+                    art.appendChild(btnHost);
+                    return art;
+                };
+
+                const ensureFilled = () => {
+                    while (scrollerTrack.scrollWidth < container.clientWidth * 2) {
+                        projects.forEach(p => scrollerTrack.appendChild(createCard(p)));
+                    }
+                };
+
+                const waitForImages = () => {
+                    const imgs = scrollerTrack.querySelectorAll('img');
+                    const promises = Array.from(imgs).map(img => {
+                        if (img.complete) return Promise.resolve();
+                        return new Promise(res => { img.onload = img.onerror = res; });
+                    });
+                    return Promise.all(promises);
+                };
+
+                projects.forEach(p => scrollerTrack.appendChild(createCard(p)));
+                waitForImages().then(() => {
+                    ensureFilled();
+
+                    const halfWidth = () => scrollerTrack.scrollWidth / 2;
+                    const baseSpeed = 40;
+                    let currentSpeed = baseSpeed;
+                    let targetSpeed = baseSpeed;
+                    const decelRate = 2.2;
+                    const accelRate = 1.8;
+                    let prevTime = performance.now();
+
+                    function step(now) {
+                        now = now || performance.now();
+                        const dt = Math.max(0, Math.min(0.05, (now - prevTime) / 1000));
+                        prevTime = now;
+
+                        const rate = targetSpeed < currentSpeed ? decelRate : accelRate;
+                        const alpha = 1 - Math.exp(-rate * dt);
+                        currentSpeed += (targetSpeed - currentSpeed) * alpha;
+
+                        container.scrollLeft += currentSpeed * dt;
+
+                        const hw = halfWidth();
+                        while (container.scrollLeft >= hw) {
+                            container.scrollLeft -= hw;
+                        }
+
+                        requestAnimationFrame(step);
+                    }
+
+                    requestAnimationFrame(step);
+
+                    container.addEventListener('mouseenter', () => {
+                        targetSpeed = 0;
+                    });
+                    container.addEventListener('mouseleave', () => {
+                        targetSpeed = baseSpeed;
+                    });
+
+                    const attachButtons = () => {
+                        scrollerTrack.querySelectorAll('.work-button-placeholder').forEach(host => {
+                            if (host.children.length) return;
+                            const title = host.dataset.title || 'Project';
+                            const slug = host.dataset.slug || '';
+                            const btn = createTextReveal({
+                                topText: title,
+                                bottomText: 'Read more',
+                                fontSize: 'clamp(1.8rem, 3.8vw, 3rem)',
+                                fontWeight: '500',
+                                textColor: '#1A1A1A',
+                                link: `post.html?project=${slug}`
+                            });
+                            host.appendChild(btn);
+                        });
+                    };
+
+                    attachButtons();
+                });
+
+                let resizeTimeout;
+                window.addEventListener('resize', () => {
+                    clearTimeout(resizeTimeout);
+                    resizeTimeout = setTimeout(() => {
+                        ensureFilled();
+                        scrollerTrack.querySelectorAll('.work-button-placeholder').forEach(host => {
+                            if (!host.children.length) {
+                                const title = host.dataset.title || 'Project';
+                                const slug = host.dataset.slug || '';
+                                const btn = createTextReveal({ topText: title, bottomText: 'Read more', fontSize: 'clamp(1.8rem, 3.8vw, 3rem)', fontWeight: '500', textColor: '#1A1A1A', link: `post.html?project=${slug}` });
+                                host.appendChild(btn);
+                            }
+                        });
+                    }, 150);
+                });
+            }
+
+            const footerEmail = createTextReveal({
+                topText: 'Email',
+                bottomText: 'Open in Email',
+                fontSize: 'var(--font-body)',
+                fontWeight: '400',
+                textColor: '#1A1A1A',
+                link: 'mailto:niekyuwen@gmail.com',
+                extraBuffer: 18
+            });
+            document.getElementById('btn-footer-email').appendChild(footerEmail);
+
+            const footerGitHub = createTextReveal({
+                topText: 'GitHub',
+                bottomText: 'Open in GitHub',
+                fontSize: 'var(--font-body)',
+                fontWeight: '400',
+                textColor: '#1A1A1A',
+                link: 'https://github.com/Nyvo2010',
+                extraBuffer: 18
+            });
+            document.getElementById('btn-footer-github').appendChild(footerGitHub);
+
+            const footerLinkedIn = createTextReveal({
+                topText: 'LinkedIn',
+                bottomText: 'Open in LinkedIn',
+                fontSize: 'var(--font-body)',
+                fontWeight: '400',
+                textColor: '#1A1A1A',
+                link: 'https://www.linkedin.com/in/niek-vogelaar-271222392/',
+                extraBuffer: 18
+            });
+            document.getElementById('btn-footer-linkedin').appendChild(footerLinkedIn);
+
+            const footerAbout = createTextReveal({
+                topText: 'About',
+                bottomText: 'About',
+                fontSize: 'var(--font-body)',
+                fontWeight: '400',
+                textColor: '#1A1A1A',
+                link: '#about',
+                extraBuffer: 18
+            });
+            document.getElementById('btn-footer-about').appendChild(footerAbout);
+
+            const footerProjects = createTextReveal({
+                topText: 'Projects',
+                bottomText: 'Projects',
+                fontSize: 'var(--font-body)',
+                fontWeight: '400',
+                textColor: '#1A1A1A',
+                link: '#projects',
+                extraBuffer: 18
+            });
+            document.getElementById('btn-footer-projects').appendChild(footerProjects);
+
+            const footerContact = createTextReveal({
+                topText: 'Contact',
+                bottomText: 'Contact',
+                fontSize: 'var(--font-body)',
+                fontWeight: '400',
+                textColor: '#1A1A1A',
+                link: '#contact',
+                extraBuffer: 18
+            });
+            document.getElementById('btn-footer-contact').appendChild(footerContact);
+
+            const btnGetInTouch = createTextReveal({
+                topText: 'Get in touch',
+                bottomText: 'Open email',
+                fontSize: 'clamp(56px, 8vw, 120px)',
+                fontWeight: '500',
+                textColor: '#1A1A1A',
+                link: 'mailto:niekyuwen@gmail.com',
+                fullWidth: true
+            });
+            document.getElementById('btn-contact-getintouch').appendChild(btnGetInTouch);
+        });
+    </script>
 </body>
+
 </html>

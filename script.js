@@ -1,44 +1,17 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const preloader = document.querySelector('.preloader');
-    
-    prepareAnimations();
-
-    if (preloader) {
-        document.body.classList.add('loading');
-        
-        window.addEventListener('load', () => {
-            setTimeout(() => {
-                preloader.classList.add('hidden');
-                document.body.classList.remove('loading');
-                setTimeout(startObservers, 100);
-            }, 1000);
-        });
-    } else {
-        startObservers();
-    }
-
-    const lenis = new Lenis({
-        duration: 1.2,
-        easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-        direction: 'vertical',
-        gestureDirection: 'vertical',
-        smooth: true,
-        mouseMultiplier: 1,
-        smoothTouch: false,
-        touchMultiplier: 2,
-    });
-
-    function raf(time) {
-        lenis.raf(time);
-        requestAnimationFrame(raf);
-    }
-
-    requestAnimationFrame(raf);
-
     const cursorDot = document.querySelector('[data-cursor-dot]');
     const cursorOutline = document.querySelector('[data-cursor-outline]');
-    
+
     if (cursorDot && cursorOutline) {
+        let outlineScale = 1;
+
+        const setOutlineScale = (scale) => {
+            const baseSize = 30;
+            const newSize = baseSize * scale;
+            cursorOutline.style.width = `${newSize}px`;
+            cursorOutline.style.height = `${newSize}px`;
+        };
+
         window.addEventListener('mousemove', function (e) {
             const posX = e.clientX;
             const posY = e.clientY;
@@ -47,147 +20,270 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.body.classList.add('cursor-visible');
             }
 
-            document.body.style.setProperty('--mouse-x', `${posX}px`);
-            document.body.style.setProperty('--mouse-y', `${posY}px`);
-
-            cursorDot.style.left = `${posX}px`;
-            cursorDot.style.top = `${posY}px`;
-
-            cursorOutline.animate({
-                left: `${posX}px`,
-                top: `${posY}px`
-            }, { duration: 180, fill: "forwards" });
+            const transformPos = `translate3d(${posX}px, ${posY}px, 0) translate(-50%, -50%)`;
+            cursorDot.style.transform = transformPos;
+            cursorOutline.style.transform = transformPos;
         });
 
-        const interactiveElements = document.querySelectorAll('a, button, .work-item, .scroll-indicator');
-        interactiveElements.forEach(el => {
-            el.addEventListener('mouseenter', () => document.body.classList.add('hovering'));
-            el.addEventListener('mouseleave', () => document.body.classList.remove('hovering'));
+        const hoverSelector = 'a, button, [role="button"], .text-reveal-link, .work-button, .work-button-placeholder, .contact-button-large, .contact-buttons-small > div, #top-header span';
+
+        document.addEventListener('mouseover', (e) => {
+            const hit = e.target.closest ? e.target.closest(hoverSelector) : null;
+            if (hit) setOutlineScale(1.8);
+        });
+        document.addEventListener('mouseout', (e) => {
+            const hit = e.target.closest ? e.target.closest(hoverSelector) : null;
+            if (hit) setOutlineScale(1);
         });
     }
+});
 
-    document.body.setAttribute('data-theme', 'dark');
+document.addEventListener('DOMContentLoaded', () => {
+    const header = document.getElementById('top-header');
+    if (!header) return;
+    const burger = header.querySelector('.hamburger');
+    const nav = header.querySelector('nav');
+    if (!burger || !nav) return;
 
-
-    if ('scrollRestoration' in history) {
-        history.scrollRestoration = 'manual';
-    }
-    window.scrollTo(0, 0);
-
-    const scrollIndicator = document.querySelector('.scroll-indicator');
-    if (scrollIndicator) {
-        let ticking = false;
-        function updateIndicator() {
-            if (window.scrollY > 10) {
-                scrollIndicator.classList.add('hidden');
-                scrollIndicator.setAttribute('aria-hidden', 'true');
-            } else {
-                scrollIndicator.classList.remove('hidden');
-                scrollIndicator.setAttribute('aria-hidden', 'false');
-            }
-            ticking = false;
+    const toggleNav = (open) => {
+        const isOpen = typeof open === 'boolean' ? open : !header.classList.contains('nav-open');
+        if (isOpen) {
+            header.classList.add('nav-open');
+            document.body.classList.add('nav-open');
+        } else {
+            header.classList.remove('nav-open');
+            document.body.classList.remove('nav-open');
         }
-        function onScroll() {
-            if (!ticking) {
-                window.requestAnimationFrame(updateIndicator);
-                ticking = true;
-            }
+        burger.classList.toggle('open', isOpen);
+        burger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        burger.setAttribute('aria-label', isOpen ? 'Close menu' : 'Open menu');
+    };
+
+    burger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleNav();
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!header.contains(e.target)) {
+            header.classList.remove('nav-open');
+            document.body.classList.remove('nav-open');
+            burger.classList.remove('open');
+            burger.setAttribute('aria-expanded', 'false');
+            burger.setAttribute('aria-label', 'Open menu');
         }
-        updateIndicator();
-        window.addEventListener('scroll', onScroll, { passive: true });
+    });
+
+    window.addEventListener('resize', () => {
+        if (window.innerWidth > 768) {
+            header.classList.remove('nav-open');
+            document.body.classList.remove('nav-open');
+            burger.classList.remove('open');
+            burger.setAttribute('aria-expanded', 'false');
+            burger.setAttribute('aria-label', 'Open menu');
+        }
+    });
+});
+
+function createTextReveal({
+    topText,
+    bottomText,
+    fontSize = 'clamp(48px, 15vw, 200px)',
+    fontWeight = '400',
+    textColor = '#1A1A1A',
+    letterSpacing = '-0.02em',
+    link = '#',
+    fullWidth = false,
+    extraBuffer = 2,
+}) {
+    const fontFamily = 'Satoshi, system-ui, -apple-system, sans-serif';
+
+    const container = document.createElement('div');
+    container.className = 'text-reveal-container';
+    container.style.position = 'relative';
+    container.style.display = 'inline-block';
+    container.style.width = 'auto';
+    container.style.overflow = 'hidden';
+    container.style.opacity = '0';
+    container.style.transition = 'opacity 0.2s ease';
+
+    const measurementLayer = document.createElement('div');
+    measurementLayer.style.position = 'absolute';
+    measurementLayer.style.left = '-9999px';
+    measurementLayer.style.top = '-9999px';
+    measurementLayer.style.visibility = 'hidden';
+    measurementLayer.style.pointerEvents = 'none';
+
+    const topMeasure = document.createElement('div');
+    topMeasure.textContent = topText;
+    topMeasure.style.fontSize = fontSize;
+    topMeasure.style.lineHeight = '0.85';
+    topMeasure.style.fontFamily = fontFamily;
+    topMeasure.style.fontWeight = fontWeight;
+    topMeasure.style.whiteSpace = 'nowrap';
+    topMeasure.style.letterSpacing = letterSpacing;
+    topMeasure.style.paddingBottom = '0.15em';
+
+    const bottomMeasure = document.createElement('div');
+    bottomMeasure.style.fontSize = fontSize;
+    bottomMeasure.style.lineHeight = '0.85';
+    bottomMeasure.style.fontFamily = fontFamily;
+    bottomMeasure.style.fontWeight = fontWeight;
+    bottomMeasure.style.whiteSpace = 'nowrap';
+    bottomMeasure.style.letterSpacing = '-0.015em';
+    bottomMeasure.style.paddingBottom = '0.15em';
+    bottomMeasure.style.display = 'flex';
+    bottomMeasure.style.alignItems = 'center';
+
+    const bottomTextSpan = document.createElement('span');
+    bottomTextSpan.textContent = bottomText + ' →';
+    bottomMeasure.appendChild(bottomTextSpan);
+
+    measurementLayer.appendChild(topMeasure);
+    measurementLayer.appendChild(bottomMeasure);
+    document.body.appendChild(measurementLayer);
+
+    const linkElement = document.createElement('a');
+    linkElement.href = link;
+    linkElement.className = 'text-reveal-link';
+    linkElement.style.fontFamily = fontFamily;
+    linkElement.style.fontWeight = fontWeight;
+    linkElement.style.color = textColor;
+    linkElement.style.textDecoration = 'none';
+    linkElement.style.transform = 'translateY(0)';
+    linkElement.style.transition = 'transform 0.3s ease';
+    linkElement.style.display = 'block';
+    linkElement.style.cursor = 'pointer';
+    linkElement.style.userSelect = 'none';
+    linkElement.style.position = 'relative';
+
+    const topTextDiv = document.createElement('div');
+    topTextDiv.textContent = topText;
+    topTextDiv.style.fontSize = fontSize;
+    topTextDiv.style.lineHeight = '0.85';
+    topTextDiv.style.letterSpacing = letterSpacing;
+    topTextDiv.style.paddingBottom = '0.15em';
+
+    const bottomTextDiv = document.createElement('div');
+    bottomTextDiv.style.position = 'absolute';
+    bottomTextDiv.style.left = '0';
+    bottomTextDiv.style.top = '100%';
+    bottomTextDiv.style.fontSize = fontSize;
+    bottomTextDiv.style.lineHeight = '0.85';
+    bottomTextDiv.style.letterSpacing = '-0.015em';
+    bottomTextDiv.style.whiteSpace = 'nowrap';
+    bottomTextDiv.style.paddingBottom = '0.15em';
+    bottomTextDiv.style.display = 'flex';
+    bottomTextDiv.style.alignItems = 'center';
+
+    if (fullWidth) {
+        container.style.display = 'block';
+        linkElement.style.width = '100%';
+        topTextDiv.style.textAlign = 'left';
+        bottomTextDiv.style.justifyContent = 'flex-start';
     }
 
-    function prepareAnimations() {
-        const splitTargets = document.querySelectorAll('.hero-line, .quote-sentence, .about-text span, .heading-line, .work-item-text, .contact-item .work-item-text');
-        
-        splitTargets.forEach(target => {
-            if (target.classList.contains('split-done') || !target.textContent.trim()) return;
+    const bottomText1 = document.createElement('span');
+    bottomText1.textContent = bottomText + ' →';
+    bottomTextDiv.appendChild(bottomText1);
 
-            const originalContent = target.innerHTML;
-            target.innerHTML = '';
-            target.classList.add('split-done');
-            
-            const wrapWords = (text) => {
-                const hasLeadingSpace = text.startsWith(' ') || text.startsWith('\n') || text.startsWith('\t');
-                const hasTrailingSpace = text.endsWith(' ') || text.endsWith('\n') || text.endsWith('\t');
-                const words = text.trim().split(/\s+/);
-                
-                let result = words.map((word, index) => {
-                    const suffix = index < words.length - 1 ? '&nbsp;' : '';
-                    return `<span class="word">${word}${suffix}</span>`;
-                }).join('');
-                
-                if (hasLeadingSpace) result = '&nbsp;' + result;
-                if (hasTrailingSpace) result = result + '&nbsp;';
-                
-                return result;
-            };
+    const topTextCopy = document.createElement('div');
+    topTextCopy.textContent = topText;
+    topTextCopy.style.position = 'absolute';
+    topTextCopy.style.left = '0';
+    topTextCopy.style.top = '200%';
+    topTextCopy.style.fontSize = fontSize;
+    topTextCopy.style.lineHeight = '0.85';
+    topTextCopy.style.letterSpacing = letterSpacing;
+    topTextCopy.style.paddingBottom = '0.15em';
 
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = originalContent;
+    linkElement.appendChild(topTextDiv);
+    linkElement.appendChild(bottomTextDiv);
+    linkElement.appendChild(topTextCopy);
 
-            Array.from(tempDiv.childNodes).forEach(node => {
-                if (node.nodeType === 3) {
-                    const text = node.textContent;
-                    if (text.trim()) {
-                        const span = document.createElement('span');
-                        span.innerHTML = wrapWords(text);
-                        while (span.firstChild) {
-                            target.appendChild(span.firstChild);
-                        }
-                    }
-                } else if (node.nodeType === 1) {
-                    const clone = node.cloneNode(true);
-                    const wrapper = document.createElement('span');
-                    wrapper.classList.add('word', 'icon-word');
-                    wrapper.appendChild(clone);
-                    target.appendChild(wrapper);
-                    
-                    target.appendChild(document.createTextNode(' ')); 
-                }
+    container.appendChild(linkElement);
+
+    linkElement.addEventListener('mouseenter', () => {
+        linkElement.style.transform = 'translateY(-100%)';
+    });
+
+    linkElement.addEventListener('mouseleave', () => {
+        linkElement.style.transform = 'translateY(0)';
+    });
+
+    const measureWidths = () => {
+        topMeasure.offsetHeight;
+        bottomMeasure.offsetHeight;
+
+        const topWidth = topMeasure.offsetWidth;
+        const bottomWidth = bottomMeasure.offsetWidth;
+        const measuredWidth = Math.max(topWidth, bottomWidth);
+
+        if (fullWidth) {
+            container.style.display = 'block';
+
+            let ancestor = container.parentElement;
+            let availableWidth = ancestor ? ancestor.getBoundingClientRect().width : document.documentElement.clientWidth;
+            while (availableWidth === 0 && ancestor && ancestor.parentElement) {
+                ancestor = ancestor.parentElement;
+                availableWidth = ancestor.getBoundingClientRect().width;
+            }
+
+            const targetWidth = Math.max(availableWidth - extraBuffer, 10);
+
+            const currentFontPx = parseFloat(window.getComputedStyle(topMeasure).fontSize) || 16;
+
+            const scale = targetWidth / Math.max(measuredWidth, 1);
+            let newFontPx = currentFontPx * scale;
+
+            newFontPx = Math.max(10, Math.min(newFontPx, 600));
+
+            [topMeasure, bottomMeasure, topTextDiv, bottomTextDiv, topTextCopy].forEach(el => {
+                el.style.fontSize = `${newFontPx}px`;
             });
+
+            topMeasure.offsetHeight; bottomMeasure.offsetHeight;
+            const newMeasured = Math.max(topMeasure.offsetWidth, bottomMeasure.offsetWidth);
+            if (newMeasured > targetWidth && newMeasured > 0) {
+                const reduction = targetWidth / newMeasured;
+                const finalFontPx = Math.max(10, Math.floor(newFontPx * reduction));
+                [topMeasure, bottomMeasure, topTextDiv, bottomTextDiv, topTextCopy].forEach(el => {
+                    el.style.fontSize = `${finalFontPx}px`;
+                });
+            }
+
+            container.style.width = '100%';
+        } else {
+            container.style.width = `${measuredWidth + extraBuffer}px`;
+        }
+
+        container.style.opacity = '1';
+    };
+
+    if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(() => {
+            measureWidths();
+            setTimeout(measureWidths, 50);
+            setTimeout(measureWidths, 150);
+            setTimeout(measureWidths, 300);
+            setTimeout(measureWidths, 500);
         });
+    } else {
+        setTimeout(measureWidths, 100);
+        setTimeout(measureWidths, 300);
+        setTimeout(measureWidths, 500);
     }
 
-    function startObservers() {
-        const observerOptions = {
-            root: null,
-            rootMargin: '0px',
-            threshold: 0.1
-        };
+    window.addEventListener('resize', measureWidths);
 
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const words = entry.target.querySelectorAll('.word');
-                    words.forEach((word, index) => {
-                        setTimeout(() => {
-                            word.classList.add('visible');
-                        }, index * 20);
-                    });
-                    observer.unobserve(entry.target);
-                }
-            });
-        }, observerOptions);
+    return container;
+}
 
-        const splitTargets = document.querySelectorAll('.hero-line, .quote-sentence, .about-text span, .heading-line, .work-item-text, .contact-item .work-item-text');
-        splitTargets.forEach(el => {
-            observer.observe(el);
-        });
-        
-        const workItems = document.querySelectorAll('.work-item');
-        const workObserver = new IntersectionObserver((entries) => {
-             entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('visible');
-                    workObserver.unobserve(entry.target);
-                }
-             });
-        }, { threshold: 0.1 });
-
-        workItems.forEach(item => {
-            item.classList.add('fade-animate');
-            workObserver.observe(item);
-        });
-    }
+document.addEventListener('DOMContentLoaded', () => {
+    const logo = document.querySelector('#top-header span');
+    if (!logo) return;
+    logo.style.cursor = 'pointer';
+    logo.addEventListener('click', (e) => {
+        window.location.href = 'index.html';
+    });
 });

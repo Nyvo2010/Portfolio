@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>404 — Nyvo</title>
+    <link rel="icon" href="assets/Website-Logo.png" type="image/png">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="cursor-dot" data-cursor-dot></div>
+    <div class="cursor-outline" data-cursor-outline></div>
+
+    <header id="top-header">
+        <span>Nyvo is a dev.</span>
+        <nav>
+            <div id="btn-header-about"></div>
+            <div id="btn-header-projects"></div>
+            <div id="btn-header-contact"></div>
+        </nav>
+        <button class="hamburger" aria-label="Open menu" aria-expanded="false">
+            <span class="hamburger-lines"></span>
+        </button>
+    </header>
+
+    <main>
+        <section id="hero">
+            <h1>404<br>Page not found</h1>
+            <div style="margin-top:2rem;" id="btn-404-home-host"></div>
+        </section>
+    </main>
+
+    <footer id="contact">
+        <div class="section-divider footer-divider"></div>
+        <div class="footer-top">
+            <div class="footer-brand">
+                Nyvo<br>is a<br>Dev.
+                <span class="footer-copyright">&copy; 2025 All rights reserved.</span>
+            </div>
+            <div class="footer-info">
+                <div class="footer-column">
+                    <span class="column-title">Contact</span>
+                    <div class="footer-links">
+                        <div id="btn-footer-email"></div>
+                        <div id="btn-footer-github"></div>
+                        <div id="btn-footer-linkedin"></div>
+                    </div>
+                </div>
+                <div class="footer-column">
+                    <span class="column-title">Pages</span>
+                    <div class="footer-links">
+                        <div id="btn-footer-about"></div>
+                        <div id="btn-footer-projects"></div>
+                        <div id="btn-footer-contact"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <div class="contact-button-large">
+                <div id="btn-contact-getintouch"></div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const btnHome = createTextReveal({
+                topText: 'Take me back home',
+                bottomText: 'Go home',
+                fontSize: 'clamp(1.8rem, 3.8vw, 3rem)',
+                fontWeight: '500',
+                textColor: '#1A1A1A',
+                link: 'index.html'
+            });
+            const host = document.getElementById('btn-404-home-host'); if (host) host.appendChild(btnHome);
+
+            const initBtn = (hostId, opts) => { const el = document.getElementById(hostId); if (el) el.appendChild(createTextReveal(opts)); };
+
+            initBtn('btn-header-about', { topText: 'About me', bottomText: 'About me', fontSize: '1.5rem', fontWeight: '500', textColor: '#1A1A1A', link: 'post.html?project=about' });
+            initBtn('btn-header-projects', { topText: 'Projects', bottomText: 'Projects', fontSize: '1.5rem', fontWeight: '500', textColor: '#1A1A1A', link: 'index.html#projects' });
+            initBtn('btn-header-contact', { topText: 'Contact', bottomText: 'Contact', fontSize: '1.5rem', fontWeight: '500', textColor: '#1A1A1A', link: '#contact' });
+
+            initBtn('btn-footer-email', { topText: 'Email', bottomText: 'Open in Email', fontSize: 'var(--font-body)', fontWeight: '400', textColor: '#1A1A1A', link: 'mailto:niekyuwen@gmail.com', extraBuffer: 18 });
+            initBtn('btn-footer-github', { topText: 'GitHub', bottomText: 'Open in GitHub', fontSize: 'var(--font-body)', fontWeight: '400', textColor: '#1A1A1A', link: 'https://github.com/Nyvo2010', extraBuffer: 18 });
+            initBtn('btn-footer-linkedin', { topText: 'LinkedIn', bottomText: 'Open in LinkedIn', fontSize: 'var(--font-body)', fontWeight: '400', textColor: '#1A1A1A', link: 'https://www.linkedin.com/in/niek-vogelaar-271222392/', extraBuffer: 18 });
+
+            initBtn('btn-footer-about', { topText: 'About', bottomText: 'About', fontSize: 'var(--font-body)', fontWeight: '400', textColor: '#1A1A1A', link: 'post.html?project=about', extraBuffer: 18 });
+            initBtn('btn-footer-projects', { topText: 'Projects', bottomText: 'Projects', fontSize: 'var(--font-body)', fontWeight: '400', textColor: '#1A1A1A', link: 'index.html#projects', extraBuffer: 18 });
+            initBtn('btn-footer-contact', { topText: 'Contact', bottomText: 'Contact', fontSize: 'var(--font-body)', fontWeight: '400', textColor: '#1A1A1A', link: '#contact', extraBuffer: 18 });
+
+            initBtn('btn-contact-getintouch', { topText: 'Get in touch', bottomText: 'Open email', fontSize: 'clamp(56px, 8vw, 120px)', fontWeight: '500', textColor: '#1A1A1A', link: 'mailto:niekyuwen@gmail.com', fullWidth: true });
+        });
+    </script>
+</body>
+
+</html>
