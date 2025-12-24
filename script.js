@@ -203,12 +203,22 @@ function createTextReveal({
 
     container.appendChild(linkElement);
 
-    linkElement.addEventListener('mouseenter', () => {
+    container.style.cursor = 'pointer';
+
+    // Animate when hovering the full container (not only the inner link text)
+    container.addEventListener('mouseenter', () => {
         linkElement.style.transform = 'translateY(-100%)';
     });
 
-    linkElement.addEventListener('mouseleave', () => {
+    container.addEventListener('mouseleave', () => {
         linkElement.style.transform = 'translateY(0)';
+    });
+
+    // Forward clicks on the container (outside the inner anchor) to the link
+    container.addEventListener('click', (e) => {
+        if (!e.target.closest || !e.target.closest('a')) {
+            window.location.href = linkElement.href;
+        }
     });
 
     const measureWidths = () => {
