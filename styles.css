@@ -398,6 +398,43 @@ h3 {
     color: var(--muted-color);
 }
 
+.page-cover {
+    position: fixed;
+    inset: 0;
+    background: var(--accent);
+    z-index: 2000;
+    transform: translateY(0%);
+    transition: transform 900ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    pointer-events: none;
+}
+
+.page-cover.revealed {
+    transform: translateY(-100%);
+}
+
+.page-cover.covering {
+    transform: translateY(0%);
+    pointer-events: auto;
+}
+
+.page-cover.no-transition {
+    transition: none !important;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .hero-scroll-indicator .scroll-text {
+        display: inline-block;
+        animation: scroll-bob 2s ease-in-out infinite;
+        will-change: transform;
+    }
+
+    @keyframes scroll-bob {
+        0% { transform: translateY(0); }
+        50% { transform: translateY(-10px); }
+        100% { transform: translateY(0); }
+    }
+}
+
 .quote-attribution {
     color: var(--muted-color);
     font-weight: 500;

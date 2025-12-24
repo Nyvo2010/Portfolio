@@ -109,6 +109,8 @@
                 link: 'post.html?project=about'
             });
             document.getElementById('btn-header-about').appendChild(btnAbout);
+            btnAbout.style.transition = 'none';
+            btnAbout.style.opacity = '1';
 
             const btnProjects = createTextReveal({
                 topText: 'Projects',
@@ -119,6 +121,8 @@
                 link: '#projects'
             });
             document.getElementById('btn-header-projects').appendChild(btnProjects);
+            btnProjects.style.transition = 'none';
+            btnProjects.style.opacity = '1';
 
             const btnContact = createTextReveal({
                 topText: 'Contact',
@@ -129,6 +133,8 @@
                 link: '#contact'
             });
             document.getElementById('btn-header-contact').appendChild(btnContact);
+            btnContact.style.transition = 'none';
+            btnContact.style.opacity = '1';
 
             const scrollerContainer = document.querySelector('.selected-scroller');
             const scrollerTrack = scrollerContainer ? scrollerContainer.querySelector('.scroller-track') : null;
@@ -183,12 +189,13 @@
                     ensureFilled();
 
                     const halfWidth = () => scrollerTrack.scrollWidth / 2;
-                    const baseSpeed = 40;
+                    const baseSpeed = 25;
                     let currentSpeed = baseSpeed;
                     let targetSpeed = baseSpeed;
-                    const decelRate = 2.2;
-                    const accelRate = 1.8;
+                    const decelRate = 1.2;
+                    const accelRate = 0.8;
                     let prevTime = performance.now();
+                    let scrollPos = container.scrollLeft;
 
                     function step(now) {
                         now = now || performance.now();
@@ -199,24 +206,28 @@
                         const alpha = 1 - Math.exp(-rate * dt);
                         currentSpeed += (targetSpeed - currentSpeed) * alpha;
 
-                        container.scrollLeft += currentSpeed * dt;
+                        scrollPos += currentSpeed * dt;
 
                         const hw = halfWidth();
-                        while (container.scrollLeft >= hw) {
-                            container.scrollLeft -= hw;
+                        if (hw > 0 && scrollPos >= hw) {
+                            scrollPos -= hw;
                         }
 
+                        container.scrollLeft = scrollPos;
                         requestAnimationFrame(step);
                     }
 
                     requestAnimationFrame(step);
 
-                    container.addEventListener('mouseenter', () => {
-                        targetSpeed = 0;
-                    });
-                    container.addEventListener('mouseleave', () => {
-                        targetSpeed = baseSpeed;
-                    });
+                    const supportsHover = window.matchMedia('(pointer: fine) and (hover: hover)').matches;
+                    if (supportsHover) {
+                        container.addEventListener('mouseenter', () => {
+                            targetSpeed = 0;
+                        });
+                        container.addEventListener('mouseleave', () => {
+                            targetSpeed = baseSpeed;
+                        });
+                    }
 
                     const attachButtons = () => {
                         scrollerTrack.querySelectorAll('.work-button-placeholder').forEach(host => {

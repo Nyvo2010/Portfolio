@@ -3,6 +3,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const cursorOutline = document.querySelector('[data-cursor-outline]');
 
     if (cursorDot && cursorOutline) {
+        const supportsCursor = window.matchMedia('(pointer: fine) and (hover: hover)').matches;
+        if (!supportsCursor) {
+            cursorDot.style.display = 'none';
+            cursorOutline.style.display = 'none';
+            return;
+        }
+
         let outlineScale = 1;
 
         const setOutlineScale = (scale) => {
@@ -36,6 +43,69 @@ document.addEventListener('DOMContentLoaded', () => {
             if (hit) setOutlineScale(1);
         });
     }
+});
+
+const _pageCover = document.createElement('div');
+_pageCover.className = 'page-cover';
+document.documentElement.appendChild(_pageCover);
+
+let _navigating = false;
+
+function isSamePageHash(href) {
+    try {
+        const url = new URL(href, location.href);
+        return url.pathname === location.pathname && url.search === location.search && url.hash && url.hash !== '';
+    } catch (e) {
+        return false;
+    }
+}
+
+function isExternalHref(href) {
+    if (!href) return false;
+    if (href.startsWith('mailto:') || href.startsWith('tel:')) return false;
+    try {
+        const url = new URL(href, location.href);
+        return url.origin !== location.origin;
+    } catch (e) {
+        return false;
+    }
+}
+
+function revealOnLoad() {
+    _pageCover.classList.add('no-transition');
+    _pageCover.classList.remove('revealed');
+    _pageCover.getBoundingClientRect();
+    _pageCover.classList.remove('no-transition');
+    requestAnimationFrame(() => {
+        _pageCover.classList.add('revealed');
+    });
+}
+
+function coverAndNavigate(href) {
+    if (_navigating) return;
+    _navigating = true;
+    _pageCover.classList.remove('revealed');
+    _pageCover.classList.add('covering');
+    const wait = 900;
+    setTimeout(() => {
+        location.href = href;
+    }, wait);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    revealOnLoad();
+});
+
+document.addEventListener('click', (e) => {
+    const a = e.target.closest && e.target.closest('a');
+    if (!a || !a.href) return;
+    if (a.target && a.target.toLowerCase() === '_blank') return;
+    if (a.hasAttribute('download')) return;
+    if (isExternalHref(a.getAttribute('href'))) return;
+    if (isSamePageHash(a.getAttribute('href'))) return;
+
+    e.preventDefault();
+    coverAndNavigate(a.href);
 });
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -203,21 +273,40 @@ function createTextReveal({
 
     container.appendChild(linkElement);
 
-    container.style.cursor = 'pointer';
+    const supportsHover = window.matchMedia('(pointer: fine) and (hover: hover)').matches;
+    if (supportsHover) {
+        container.style.cursor = 'pointer';
+        container.addEventListener('mouseenter', () => {
+            linkElement.style.transform = 'translateY(-100%)';
+        });
 
-    // Animate when hovering the full container (not only the inner link text)
-    container.addEventListener('mouseenter', () => {
-        linkElement.style.transform = 'translateY(-100%)';
-    });
+        container.addEventListener('mouseleave', () => {
+            linkElement.style.transform = 'translateY(0)';
+        });
+    }
 
-    container.addEventListener('mouseleave', () => {
-        linkElement.style.transform = 'translateY(0)';
-    });
+    const isExternal = (href) => {
+        if (!href) return false;
+        if (href.startsWith('mailto:') || href.startsWith('tel:')) return true;
+        try {
+            const url = new URL(href, location.href);
+            return url.origin !== location.origin;
+        } catch (err) {
+            return false;
+        }
+    };
 
-    // Forward clicks on the container (outside the inner anchor) to the link
+    if (isExternal(linkElement.href)) {
+        linkElement.setAttribute('target', '_blank');
+        linkElement.setAttribute('rel', 'noopener noreferrer');
+    } else {
+        linkElement.removeAttribute('target');
+        linkElement.removeAttribute('rel');
+    }
+
     container.addEventListener('click', (e) => {
         if (!e.target.closest || !e.target.closest('a')) {
-            window.location.href = linkElement.href;
+            linkElement.click();
         }
     });
 
@@ -240,12 +329,9 @@ function createTextReveal({
             }
 
             const targetWidth = Math.max(availableWidth - extraBuffer, 10);
-
             const currentFontPx = parseFloat(window.getComputedStyle(topMeasure).fontSize) || 16;
-
             const scale = targetWidth / Math.max(measuredWidth, 1);
             let newFontPx = currentFontPx * scale;
-
             newFontPx = Math.max(10, Math.min(newFontPx, 600));
 
             [topMeasure, bottomMeasure, topTextDiv, bottomTextDiv, topTextCopy].forEach(el => {
@@ -269,6 +355,11 @@ function createTextReveal({
 
         container.style.opacity = '1';
     };
+
+    try {
+        measureWidths();
+    } catch (e) {
+    }
 
     if (document.fonts && document.fonts.ready) {
         document.fonts.ready.then(() => {
@@ -294,6 +385,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!logo) return;
     logo.style.cursor = 'pointer';
     logo.addEventListener('click', (e) => {
-        window.location.href = 'index.html';
+        e.preventDefault();
+        if (typeof coverAndNavigate === 'function') {
+            coverAndNavigate('index.html');
+        } else {
+            window.location.href = 'index.html';
+        }
     });
 });
