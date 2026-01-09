@@ -26,7 +26,7 @@ window.postsData = [
             <p>The application is structured around the idea that good design reduces friction. Small details—such as streamlined navigation, clear recipe steps, and personalized user experiences—were deliberately added to improve usability. User accounts allow preferences and progress to be stored, making the app feel personal rather than generic.</p>
             <p>AI features in Sizzle are used to enhance, not replace, the cooking process. Instead of over-automating, the AI supports users by helping with decisions, organization, or inspiration. This project demonstrates my interest in combining frontend design, backend logic, and AI in a practical, user-centered way.</p>`,
         links: [
-            { text: 'GitHub', subtext: 'Open in GitHub', url: 'https://github.com/SizzleDevs/Sizzle_webapp' }
+            { text: 'Website', subtext: 'Open the website', url: 'https://sizzledevs.github.io/Sizzle_webapp/index.html' }
         ]
     },
     {
