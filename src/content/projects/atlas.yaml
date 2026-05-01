@@ -1,0 +1,19 @@
+title: "Atlas"
+date: "2026-05-01"
+coverImage: "/src/assets/projects/Atlas-Mockup.png"
+tags: ["AI", "MCP"]
+summary: "A terminal-first AI agent powered by the Model Context Protocol."
+content: |-
+  ![Hero](/src/assets/projects/Atlas-Mockup.png)
+
+  ### Terminal-First Intelligence
+  Atlas brings the power of AI directly into your shell. It leverages the Model Context Protocol (MCP) to access tools and data seamlessly, keeping your workflow centered where you do your work.
+
+  ### Simple by Design
+  Complex AI interactions reduced to simple terminal commands. 
+
+  ### Architecture
+  Atlas is an autonomous AI agent built as a self-initiated project to explore modern AI agent architectures and the emerging “agent hype” of 2025. It runs entirely in the terminal and is powered by Mistral AI, using MCP (Model Context Protocol) for structured tool interaction. The agent is capable of using its own browser, interacting with the DOM, and accessing external tools such as a calendar, email, and system commands. 
+
+  ### Learning Exercise
+  This project was primarily a learning exercise, aimed at understanding how autonomous agents reason, use tools, and maintain context over time. Building Atlas gave me hands-on experience with agent design, tool orchestration, and the limitations of current AI systems.

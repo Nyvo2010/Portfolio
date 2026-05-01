@@ -1,0 +1,16 @@
+title: "Rubus"
+date: "2026-05-01"
+coverImage: "/src/assets/projects/Rubus-Mockup.png"
+tags: ["Design System", "Branding"]
+summary: "A tactile, nature-inspired design system."
+content: |-
+  ![Hero](/src/assets/projects/Rubus-Mockup.png)
+
+  ### Tactile Design
+  Rubus began as a personal project to stop losing context between conversations and to stop hunting for the same files or notes every day. I run it 24/7 on a Raspberry Pi, which is where the name and logo come from.
+
+  ### Helpful Automation
+  At a basic level Rubus remembers what’s important, summarizes recent activity, and performs small automations so routine work takes less attention. It’s not trying to be clever; it is built to be helpful: better meeting notes, clearer follow‑ups, and quick lookups.
+
+  ### Technical Breakdown
+  Under the hood, Rubus uses the Mistral API for language tasks, a simple scheduler for regular intervals, and a skills system where capabilities are added as plain Markdown files. Memory is split into short‑term and longer‑term parts so it behaves more like a human, remembering key decisions without losing focus.
