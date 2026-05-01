@@ -16,12 +16,21 @@ interface Post {
   tags?: string[];
 }
 
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
 interface BlogProps {
   onPageChange: (page: string) => void;
   activePage: string;
+  onPostClick?: (slug: string) => void;
+  selectedSlug?: string;
 }
 
-export default function Blog({ onPageChange, activePage }: BlogProps) {
+export default function Blog({ onPageChange, activePage, onPostClick, selectedSlug }: BlogProps) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
 
@@ -32,6 +41,16 @@ export default function Blog({ onPageChange, activePage }: BlogProps) {
       setSelectedPost(null);
     }
   }, [activePage]);
+
+  useEffect(() => {
+    if (selectedSlug && posts.length > 0) {
+      const post = posts.find(p => slugify(p.title) === selectedSlug);
+      if (post) {
+        setSelectedPost(post);
+        containerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }
+  }, [selectedSlug, posts]);
 
   useEffect(() => {
     // Load all YAML files from the content directory
@@ -87,7 +106,7 @@ export default function Blog({ onPageChange, activePage }: BlogProps) {
                 transition={{ duration: 0.8, delay: i * 0.1, ease: [0.23, 1, 0.32, 1] }}
                 onClick={() => {
                   setSelectedPost(post);
-                  onPageChange("blog_post");
+                  onPostClick?.(slugify(post.title));
                   containerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
                 className="group cursor-pointer border-t first:border-t-0 border-black/5 py-16"
@@ -97,7 +116,10 @@ export default function Blog({ onPageChange, activePage }: BlogProps) {
                     <div className="mb-6">
                       <span className="text-[10px] uppercase tracking-widest font-bold opacity-30">{post.date}</span>
                     </div>
-                    <h3 className="text-4xl md:text-6xl tracking-tighter mb-6 group-hover:pl-6 transition-all duration-500 uppercase font-medium leading-[0.9]">
+                    <h3 
+                      onClick={() => onPostClick?.(slugify(post.title))}
+                      className="text-4xl md:text-6xl tracking-tighter mb-6 group-hover:pl-6 transition-all duration-500 uppercase font-medium leading-[0.9]"
+                    >
                       {post.title}
                     </h3>
                     <p className="text-lg opacity-40 max-w-xl font-medium">{post.summary}</p>

@@ -19,14 +19,64 @@ import ChatWidget from "./components/ChatWidget";
 import NotFound from "./components/NotFound";
 import { AnimatePresence, motion } from "motion/react";
 
+interface RouteState {
+  page: string;
+  projectSlug?: string;
+  blogSlug?: string;
+}
+
+function parseUrl(): RouteState {
+  const path = window.location.pathname;
+  const segments = path.split("/").filter(Boolean);
+
+  if (segments.length === 0 || (segments.length === 1 && segments[0] === "")) {
+    return { page: "home" };
+  }
+
+  if (segments[0] === "projects" || segments[0] === "project") {
+    if (segments.length >= 2 && segments[1]) {
+      return { page: "project", projectSlug: segments[1] };
+    }
+    return { page: "home" };
+  }
+
+  if (segments[0] === "blog") {
+    if (segments.length >= 2 && segments[1]) {
+      return { page: "blog_post", blogSlug: segments[1] };
+    }
+    return { page: "blog" };
+  }
+
+  if (segments[0] === "lab") {
+    return { page: "lab" };
+  }
+
+  return { page: "404" };
+}
+
+function navigate(path: string) {
+  window.history.pushState({}, "", path);
+  window.dispatchEvent(new PopStateEvent("popstate"));
+}
+
 export default function App() {
   const [progress, setProgress] = useState(0);
   const [isLoadingVisible, setIsLoadingVisible] = useState(true);
   const [isStackComplete, setIsStackComplete] = useState(false);
   const [isReadyForOrbit, setIsReadyForOrbit] = useState(false);
-  const [activePage, setActivePage] = useState("home");
+  const [route, setRoute] = useState<RouteState>(() => parseUrl());
   const [galleryMode, setGalleryMode] = useState<"orbit" | "grid">("orbit");
-  const [selectedProjectIndex, setSelectedProjectIndex] = useState<number | null>(null);
+  const [selectedProjectSlug, setSelectedProjectSlug] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setRoute(parseUrl());
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  const activePage = route.page;
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -64,20 +114,42 @@ export default function App() {
   }, [isLoadingVisible, isStackComplete]);
 
   const handlePageChange = (page: string) => {
-    setActivePage(page);
+    let path = "/";
+    if (page === "blog") path = "/blog";
+    else if (page === "lab") path = "/lab";
+    else if (page === "home") path = "/";
+    navigate(path);
+    setRoute(parseUrl());
     if (page === "home") {
       setGalleryMode("orbit");
-      setSelectedProjectIndex(null);
+      setSelectedProjectSlug(null);
     }
   };
 
-  const handleImageClick = (index: number) => {
-    if (galleryMode === "orbit") {
-      setActivePage("project");
-      setGalleryMode("grid");
-      setSelectedProjectIndex(index);
-    }
+  const handleProjectClick = (slug: string) => {
+    setRoute({ page: "project", projectSlug: slug });
+    setGalleryMode("grid");
+    setSelectedProjectSlug(slug);
+    navigate(`/projects/${slug}`);
   };
+
+  const handleBlogPostClick = (slug: string) => {
+    setRoute({ page: "blog_post", blogSlug: slug });
+    navigate(`/blog/${slug}`);
+  };
+
+  useEffect(() => {
+    const r = parseUrl();
+    if (r.page === "project" && r.projectSlug) {
+      setGalleryMode("grid");
+      setSelectedProjectSlug(r.projectSlug);
+    }
+    if (r.page === "blog_post" && r.blogSlug) {
+      setRoute(r);
+    }
+  }, []);
+
+  const showProjectView = route.page === "home" || route.page === "project";
 
   return (
     <div className="relative w-full h-screen overflow-hidden bg-[#f7f7f5]">
@@ -85,9 +157,9 @@ export default function App() {
       
       {/* Background/Main Content */}
       <AnimatePresence mode="wait">
-        {(activePage === "home" || activePage === "project") && (
+        {showProjectView && (
           <motion.div
-            key={activePage}
+            key={route.page}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -97,17 +169,17 @@ export default function App() {
             <Gallery 
               onStackComplete={handleStackComplete} 
               isReadyForOrbit={isReadyForOrbit}
-              onImageClick={handleImageClick}
+              onProjectClick={handleProjectClick}
               viewMode={galleryMode}
               startStack={progress >= 100}
-              selectedProjectIndex={selectedProjectIndex}
+              selectedProjectSlug={selectedProjectSlug}
               onPageChange={handlePageChange}
             />
-            {activePage === "home" && isReadyForOrbit && <Overlay />}
+            {route.page === "home" && isReadyForOrbit && <Overlay />}
           </motion.div>
         )}
 
-        {activePage === "lab" && (
+        {route.page === "lab" && (
           <motion.div
             key="lab"
             initial={{ opacity: 0, scale: 0.98 }}
@@ -120,7 +192,7 @@ export default function App() {
           </motion.div>
         )}
 
-        {(activePage === "blog" || activePage === "blog_post") && (
+        {(route.page === "blog" || route.page === "blog_post") && (
           <motion.div
             key="blog"
             initial={{ opacity: 0, y: 20 }}
@@ -129,11 +201,16 @@ export default function App() {
             transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
             className="absolute inset-0 z-20"
           >
-            <Blog onPageChange={handlePageChange} activePage={activePage} />
+            <Blog 
+              onPageChange={handlePageChange} 
+              activePage={route.page}
+              onPostClick={handleBlogPostClick}
+              selectedSlug={route.blogSlug}
+            />
           </motion.div>
         )}
 
-        {!["home", "project", "lab", "blog", "blog_post"].includes(activePage) && (
+        {route.page === "404" && (
           <motion.div
             key="404"
             initial={{ opacity: 0 }}

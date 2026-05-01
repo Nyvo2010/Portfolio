@@ -47,17 +47,24 @@ import remarkGfm from "remark-gfm";
 
 import Footer from "./Footer";
 
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
 interface GalleryProps {
   onStackComplete: () => void;
   isReadyForOrbit: boolean;
-  onImageClick: (index: number) => void;
+  onProjectClick: (slug: string) => void;
   viewMode: "orbit" | "grid";
   startStack: boolean;
-  selectedProjectIndex: number | null;
+  selectedProjectSlug: string | null;
   onPageChange: (page: string) => void;
 }
 
-export default function Gallery({ onStackComplete, isReadyForOrbit, onImageClick, viewMode, startStack, selectedProjectIndex, onPageChange }: GalleryProps) {
+export default function Gallery({ onStackComplete, isReadyForOrbit, onProjectClick, viewMode, startStack, selectedProjectSlug, onPageChange }: GalleryProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const itemsRef = useRef<HTMLDivElement>(null);
   const scrollRotationRef = useRef(0);
@@ -170,9 +177,9 @@ export default function Gallery({ onStackComplete, isReadyForOrbit, onImageClick
         };
       }
     }
-  }, [isReadyForOrbit, viewMode, selectedProjectIndex]);
+  }, [isReadyForOrbit, viewMode, selectedProjectSlug]);
 
-  const selectedProject = selectedProjectIndex !== null ? PROJECTS[selectedProjectIndex] : null;
+  const selectedProject = selectedProjectSlug ? PROJECTS.find(p => slugify(p.title) === selectedProjectSlug) || PROJECTS[0] : null;
 
   return (
     <div className={`carousel-container ${viewMode === 'grid' ? 'overflow-y-auto bg-[#f7f7f5] z-[70] scroll-smooth' : 'overflow-hidden'}`} ref={containerRef}>
@@ -181,7 +188,9 @@ export default function Gallery({ onStackComplete, isReadyForOrbit, onImageClick
         ref={itemsRef}
         style={{ opacity: startStack ? 1 : 0 }}
       >
-        {PROJECTS.map((project, i) => (
+        {PROJECTS.map((project, i) => {
+          const projectSlug = slugify(project.title);
+          return (
           <div
             key={i}
             className="carousel-item group absolute cursor-pointer rounded-lg overflow-hidden shadow-none flex"
@@ -190,7 +199,7 @@ export default function Gallery({ onStackComplete, isReadyForOrbit, onImageClick
               pointerEvents: viewMode === 'orbit' ? 'auto' : 'none'
             }}
             onClick={() => {
-              onImageClick(i);
+              onProjectClick(projectSlug);
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             onMouseEnter={() => setHoveredIndex(i)}
@@ -205,7 +214,8 @@ export default function Gallery({ onStackComplete, isReadyForOrbit, onImageClick
               </div>
             )}
           </div>
-        ))}
+        );
+        })}
 
         {viewMode === "grid" && selectedProject && (
           <div className="w-full max-w-6xl mx-auto px-6 md:px-12 lg:px-20 py-32 md:py-48 flex flex-col items-center">
