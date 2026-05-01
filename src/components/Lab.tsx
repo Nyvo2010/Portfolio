@@ -1,8 +1,29 @@
 import { motion, useMotionValue, useTransform } from "motion/react";
 import { useRef, useMemo, useState, useEffect } from "react";
 
-const rawImages = (import.meta as any).glob("/src/assets/projects/*.{jpg,jpeg,png,webp,gif}", { query: "?url", eager: true });
-const LOCAL_IMAGES = Object.values(rawImages).map((mod: any) => mod.default || mod);
+const LOCAL_IMAGES = [
+  "/assets/projects/Alto-Hero.png",
+  "/assets/projects/Alto-Footer.png",
+  "/assets/projects/Atlas-Mockup.png",
+  "/assets/projects/Kicks-Hero.png",
+  "/assets/projects/Kicks-Inventory.png",
+  "/assets/projects/Monolith-Hero.png",
+  "/assets/projects/Monolith-About.png",
+  "/assets/projects/Monolith-Closeup.png",
+  "/assets/projects/Monolith-How.png",
+  "/assets/projects/Monolith-Why.png",
+  "/assets/projects/PXL-Hero.png",
+  "/assets/projects/PXL-Works.png",
+  "/assets/projects/PXL-About.png",
+  "/assets/projects/PXL-CTA.png",
+  "/assets/projects/PXL-Logo.png",
+  "/assets/projects/Rubus-Mockup.png",
+  "/assets/projects/Vanta-Hero.png",
+  "/assets/projects/Vanta-Works.png",
+  "/assets/projects/Vanta-About.png",
+  "/assets/projects/Vanta-Services.png",
+  "/assets/projects/Vanta-CTA.png",
+];
 
 const LAB_IMAGES = LOCAL_IMAGES.length > 0 ? LOCAL_IMAGES : [
   "https://assets.codepen.io/7558/bw-portrait-001.jpg",

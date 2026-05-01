@@ -1,10 +1,8 @@
 title: "Alto"
 date: "2026-05-01"
-coverImage: "/src/assets/projects/Alto-Hero.png"
-tags: ["AI", "Proactive AI"]
-summary: "Proactive AI agent website interface."
+coverImage: "/assets/projects/Alto-Hero.png"
 content: |-
-  ![Hero](/src/assets/projects/Alto-Hero.png)
+  ![Hero](/assets/projects/Alto-Hero.png)
 
   ### The Proactive Agent
   Alto is designed to anticipate user needs before they are explicitly stated. I designed a minimalist and clear interface to explain how the Alto AI agent works seamlessly.
@@ -12,7 +10,7 @@ content: |-
   ### Backend & Automation
   Beyond the frontend, I worked on the agent's backend. It uses a robust system triggered by both scheduled cron tasks and real-time messages via Slack and Discord, enabling it to execute complex actions across the tools and applications your team uses daily.
 
-  ![Footer](/src/assets/projects/Alto-Footer.png)
+  ![Footer](/assets/projects/Alto-Footer.png)
 
   ### The Future
   The interface adapts and shifts to provide the necessary tools at the exact moment of intent.

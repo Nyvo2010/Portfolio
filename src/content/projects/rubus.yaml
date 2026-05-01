@@ -1,10 +1,10 @@
 title: "Rubus"
 date: "2026-05-01"
-coverImage: "/src/assets/projects/Rubus-Mockup.png"
+coverImage: "/assets/projects/Rubus-Mockup.png"
 tags: ["Design System", "Branding"]
 summary: "A tactile, nature-inspired design system."
 content: |-
-  ![Hero](/src/assets/projects/Rubus-Mockup.png)
+  ![Hero](/assets/projects/Rubus-Mockup.png)
 
   ### Tactile Design
   Rubus began as a personal project to stop losing context between conversations and to stop hunting for the same files or notes every day. I run it 24/7 on a Raspberry Pi, which is where the name and logo come from.

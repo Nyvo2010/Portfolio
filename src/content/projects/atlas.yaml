@@ -1,10 +1,10 @@
 title: "Atlas"
 date: "2026-05-01"
-coverImage: "/src/assets/projects/Atlas-Mockup.png"
+coverImage: "/assets/projects/Atlas-Mockup.png"
 tags: ["AI", "MCP"]
 summary: "A terminal-first AI agent powered by the Model Context Protocol."
 content: |-
-  ![Hero](/src/assets/projects/Atlas-Mockup.png)
+  ![Hero](/assets/projects/Atlas-Mockup.png)
 
   ### Terminal-First Intelligence
   Atlas brings the power of AI directly into your shell. It leverages the Model Context Protocol (MCP) to access tools and data seamlessly, keeping your workflow centered where you do your work.
