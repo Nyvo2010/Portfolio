@@ -179,7 +179,7 @@ export default function Gallery({ onStackComplete, isReadyForOrbit, onProjectCli
     }
   }, [isReadyForOrbit, viewMode, selectedProjectSlug]);
 
-  const selectedProject = selectedProjectSlug ? PROJECTS.find(p => slugify(p.title) === selectedProjectSlug) || PROJECTS[0] : null;
+  const selectedProject = selectedProjectSlug ? PROJECTS.find(p => slugify(p.title) === selectedProjectSlug) : null;
 
   return (
     <div className={`carousel-container ${viewMode === 'grid' ? 'overflow-y-auto bg-[#f7f7f5] z-[70] scroll-smooth' : 'overflow-hidden'}`} ref={containerRef}>

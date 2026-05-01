@@ -65,8 +65,9 @@ export default function App() {
   const [isStackComplete, setIsStackComplete] = useState(false);
   const [isReadyForOrbit, setIsReadyForOrbit] = useState(false);
   const [route, setRoute] = useState<RouteState>(() => parseUrl());
-  const [galleryMode, setGalleryMode] = useState<"orbit" | "grid">("orbit");
   const [selectedProjectSlug, setSelectedProjectSlug] = useState<string | null>(null);
+
+  const galleryMode = route.page === "project" ? "grid" : "orbit";
 
   useEffect(() => {
     const handlePopState = () => {
@@ -77,6 +78,14 @@ export default function App() {
   }, []);
 
   const activePage = route.page;
+
+  useEffect(() => {
+    if (route.page === "project" && route.projectSlug) {
+      setSelectedProjectSlug(route.projectSlug);
+    } else if (route.page === "home") {
+      setSelectedProjectSlug(null);
+    }
+  }, [route.page, route.projectSlug]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -121,14 +130,12 @@ export default function App() {
     navigate(path);
     setRoute(parseUrl());
     if (page === "home") {
-      setGalleryMode("orbit");
       setSelectedProjectSlug(null);
     }
   };
 
   const handleProjectClick = (slug: string) => {
     setRoute({ page: "project", projectSlug: slug });
-    setGalleryMode("grid");
     setSelectedProjectSlug(slug);
     navigate(`/projects/${slug}`);
   };
@@ -137,17 +144,6 @@ export default function App() {
     setRoute({ page: "blog_post", blogSlug: slug });
     navigate(`/blog/${slug}`);
   };
-
-  useEffect(() => {
-    const r = parseUrl();
-    if (r.page === "project" && r.projectSlug) {
-      setGalleryMode("grid");
-      setSelectedProjectSlug(r.projectSlug);
-    }
-    if (r.page === "blog_post" && r.blogSlug) {
-      setRoute(r);
-    }
-  }, []);
 
   const showProjectView = route.page === "home" || route.page === "project";
 
