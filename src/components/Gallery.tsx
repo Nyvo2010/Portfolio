@@ -142,7 +142,7 @@ export default function Gallery({ onStackComplete, isReadyForOrbit, onProjectCli
           overwrite: true
         });
       });
-    } else if (selectedProjectIndex !== null) {
+    } else if (selectedProjectSlug !== null) {
       // Transition out of orbit
       cardsRef.current.forEach((card, i) => {
         gsap.to(card, {
