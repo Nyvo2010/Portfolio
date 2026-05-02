@@ -8,7 +8,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Gallery from "./components/Gallery";
 import Overlay from "./components/Overlay";
 import LoadingScreen from "./components/LoadingScreen";
@@ -74,11 +74,17 @@ function navigate(path: string) {
 }
 
 export default function App() {
+  const initialRoute = parseUrl();
+  const hasLoadedRef = useRef(false);
   const [progress, setProgress] = useState(0);
-  const [isLoadingVisible, setIsLoadingVisible] = useState(route.page === "home");
+  const [isLoadingVisible, setIsLoadingVisible] = useState(() => {
+    if (hasLoadedRef.current || initialRoute.page !== "home") return false;
+    hasLoadedRef.current = true;
+    return true;
+  });
   const [isStackComplete, setIsStackComplete] = useState(false);
   const [isReadyForOrbit, setIsReadyForOrbit] = useState(false);
-  const [route, setRoute] = useState<RouteState>(() => parseUrl());
+  const [route, setRoute] = useState<RouteState>(initialRoute);
   const [selectedProjectSlug, setSelectedProjectSlug] = useState<string | null>(null);
 
   const galleryMode = route.page === "project" ? "grid" : "orbit";

@@ -220,26 +220,21 @@ Niek specializes in digital product design, brand identity, and creating polishe
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
         className="bg-black text-white rounded-[8px] overflow-hidden flex flex-col relative"
       >
-        <AnimatePresence>
+        <AnimatePresence mode="wait">
           {!isOpen ? (
             <motion.button
               key="closed-state"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1, transition: { delay: 0.1 } }}
-              exit={{ opacity: 0, transition: { duration: 0.1 } }}
               onClick={() => setIsOpen(true)}
               className="absolute inset-0 w-full h-full flex items-center justify-center text-white outline-none cursor-pointer"
             >
-              <motion.div layoutId="chat-icon" className="grid grid-cols-3 gap-[3px] w-[18px]">
+              <div className="grid grid-cols-3 gap-[3px] w-[18px]">
                 {[...Array(9)].map((_, i) => (
-                  <motion.div 
+                  <div 
                     key={i} 
-                    animate={isLoading ? { opacity: [1, 0.3, 1] } : { opacity: 1 }}
-                    transition={{ duration: 1.5, repeat: isLoading ? Infinity : 0, delay: i * 0.1 }}
-                    className={`w-[4px] h-[4px] rounded-full ${i === 4 ? 'bg-transparent' : 'bg-current'}`} 
+                    className={`w-[4px] h-[4px] rounded-full ${i === 4 ? 'bg-transparent' : 'bg-current'} ${isLoading ? 'animate-pulse' : ''}`}
                   />
                 ))}
-              </motion.div>
+              </div>
             </motion.button>
           ) : (
             <motion.div
@@ -341,16 +336,14 @@ Niek specializes in digital product design, brand identity, and creating polishe
               <div className="px-5 py-4 bg-black relative shrink-0">
                 <form onSubmit={handleSubmit} className="relative flex items-center gap-3">
                   <div className="flex-shrink-0 text-[white] flex items-center justify-center opacity-80">
-                    <motion.div layoutId="chat-icon" className="grid grid-cols-3 gap-[3px] w-[18px]">
+                    <div className="grid grid-cols-3 gap-[3px] w-[18px]">
                       {[...Array(9)].map((_, i) => (
-                        <motion.div 
+                        <div 
                           key={i} 
-                          animate={isLoading ? { opacity: [1, 0.3, 1] } : { opacity: 1 }}
-                          transition={{ duration: 1.5, repeat: isLoading ? Infinity : 0, delay: i * 0.1 }}
-                          className={`w-[4px] h-[4px] rounded-full ${i === 4 ? 'bg-transparent' : 'bg-current'}`} 
+                          className={`w-[4px] h-[4px] rounded-full ${i === 4 ? 'bg-transparent' : 'bg-current'} ${isLoading ? 'animate-pulse' : ''}`}
                         />
                       ))}
-                    </motion.div>
+                    </div>
                   </div>
                   <input
                     type="text"
