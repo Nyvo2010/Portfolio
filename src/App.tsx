@@ -25,32 +25,7 @@ interface RouteState {
   blogSlug?: string;
 }
 
-function parseUrl(): RouteState {
-  const redirectPath = sessionStorage.getItem('spa_redirect');
-  if (redirectPath) {
-    sessionStorage.removeItem('spa_redirect');
-    const segments = redirectPath.split("/").filter(Boolean);
-    if (segments[0] === "projects" || segments[0] === "project") {
-      if (segments.length >= 2 && segments[1]) {
-        return { page: "project", projectSlug: segments[1] };
-      }
-      return { page: "home" };
-    }
-    if (segments[0] === "blog") {
-      if (segments.length >= 2 && segments[1]) {
-        return { page: "blog_post", blogSlug: segments[1] };
-      }
-      return { page: "blog" };
-    }
-    if (segments[0] === "lab") {
-      return { page: "lab" };
-    }
-    return { page: "404" };
-  }
-
-  const path = window.location.pathname;
-  const segments = path.split("/").filter(Boolean);
-
+function parseSegments(segments: string[]): RouteState {
   if (segments.length === 0 || (segments.length === 1 && segments[0] === "")) {
     return { page: "home" };
   }
@@ -78,6 +53,19 @@ function parseUrl(): RouteState {
   }
 
   return { page: "404" };
+}
+
+function parseUrl(): RouteState {
+  const redirectPath = sessionStorage.getItem('spa_redirect');
+  if (redirectPath) {
+    sessionStorage.removeItem('spa_redirect');
+    const segments = redirectPath.split("/").filter(Boolean);
+    return parseSegments(segments);
+  }
+
+  const path = window.location.pathname;
+  const segments = path.split("/").filter(Boolean);
+  return parseSegments(segments);
 }
 
 function navigate(path: string) {

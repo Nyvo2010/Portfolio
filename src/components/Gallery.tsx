@@ -27,32 +27,14 @@ const PROJECTS = [...parsedProjects].sort((a, b) => {
   return (timeB || 0) - (timeA || 0);
 });
 
-export const getItemClass = (totalAmount: number, index: number) => {
-  const layouts: Record<number, string[]> = {
-    1: ["col-span-12 aspect-[21/9]"],
-    2: ["col-span-6 aspect-square", "col-span-6 aspect-square"],
-    3: ["col-span-4 aspect-square", "col-span-4 aspect-square", "col-span-4 aspect-square"],
-    4: ["col-span-6 aspect-video", "col-span-6 aspect-video", "col-span-6 aspect-video", "col-span-6 aspect-video"],
-    5: ["col-span-6 aspect-[3/2]", "col-span-6 aspect-[3/2]", "col-span-4 aspect-square", "col-span-4 aspect-square", "col-span-4 aspect-square"],
-    6: ["col-span-4 aspect-square", "col-span-4 aspect-square", "col-span-4 aspect-square", "col-span-4 aspect-square", "col-span-4 aspect-square", "col-span-4 aspect-square"]
-  };
-
-  const count = Math.min(totalAmount, 6);
-  const layout = layouts[count] || layouts[6];
-  return layout[index % layout.length] || "col-span-4 aspect-square";
-};
+export { getItemClass } from "../utils/grid";
 
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import Footer from "./Footer";
-
-function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
-}
+import { slugify } from "../utils/slugify";
+import { markdownPlugins, markdownComponents } from "../utils/markdown";
 
 interface GalleryProps {
   onStackComplete: () => void;
@@ -249,71 +231,8 @@ export default function Gallery({ onStackComplete, isReadyForOrbit, onProjectCli
             >
               <div className="prose-lg font-medium max-w-none">
                 <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  components={{
-                    a: ({node, ...props}) => (
-                      <a 
-                        href={props.href} 
-                        className="text-black underline decoration-black/20 hover:decoration-black transition-all duration-300"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        {...props}
-                      />
-                    ),
-                    h3: ({node, ...props}) => <h3 className="text-3xl mt-20 mb-8 tracking-tighter font-medium uppercase leading-none" {...props} />,
-                    h4: ({node, ...props}) => <h4 className="text-2xl mt-12 mb-6 tracking-tight uppercase font-medium" {...props} />,
-                    p: ({node, children, ...props}) => {
-                      // Filter out string children that are just whitespace
-                      const realChildren = (Array.isArray(children) ? children : [children]).filter(child => 
-                        !(typeof child === 'string' && child.trim() === '')
-                      );
-
-                      const isImagesOnly = realChildren.every(child => 
-                        (typeof child === 'object' && child !== null && 'type' in (child as any) && (child as any).type === 'img')
-                      );
-
-                      if (isImagesOnly) {
-                        const images = realChildren.filter(child => typeof child === 'object' && child !== null && 'type' in child && (child as any).type === 'img');
-                        const total = images.length;
-                        
-                        if (total === 1) {
-                          return (
-                            <div className="my-12 bg-neutral-900 border-[6px] border-neutral-900 overflow-hidden rounded-md">
-                              <img 
-                                src={images[0].props.src} 
-                                alt={images[0].props.alt} 
-                                className="w-full h-auto block" 
-                              />
-                            </div>
-                          );
-                        }
-                        
-                        return (
-                          <div className="grid grid-cols-12 gap-[6px] my-12 bg-neutral-900 border-[6px] border-neutral-900 overflow-hidden rounded-md p-0">
-                            {images.map((img: any, idx: number) => (
-                              <div key={idx} className={`${getItemClass(total, idx)} overflow-hidden bg-neutral-800`}>
-                                <img 
-                                  src={img.props.src} 
-                                  alt={img.props.alt} 
-                                  className="w-full h-full object-cover transition-all duration-1000" 
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        );
-                      }
-                      return <p className="mb-8 last:mb-0 text-xl leading-[1.6] opacity-60" {...props}>{children}</p>;
-                    },
-                    ul: ({node, ...props}) => <ul className="list-none pl-0 mb-10 space-y-4" {...props} />,
-                    li: ({node, children, ...props}) => (
-                      <li className="flex items-start gap-4 text-xl opacity-60" {...props}>
-                        <span className="w-1.5 h-1.5 rounded-full bg-black/20 mt-3 shrink-0" />
-                        {children}
-                      </li>
-                    ),
-                    hr: ({node, ...props}) => <hr className="my-16 border-black/5" {...props} />,
-                    blockquote: ({node, ...props}) => <blockquote className="border-l-[1px] border-black/20 pl-10 italic mb-10 text-3xl tracking-tight opacity-80 py-4" {...props} />,
-                  }}
+                  remarkPlugins={markdownPlugins}
+                  components={markdownComponents}
                 >
                   {selectedProject.content || `### The Concept\n${selectedProject.summary || "Experimental design exploration bridging the gap between digital and physical forms."}\n\n### The Result\nA cohesive brand experience that translates seamlessly across tactile and digital mediums, focusing on modularity and timeless aesthetics.`}
                 </ReactMarkdown>

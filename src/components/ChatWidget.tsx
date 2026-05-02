@@ -49,8 +49,7 @@ export default function ChatWidget({ onPageChange }: ChatWidgetProps) {
 
   useEffect(() => {
     if (isOpen) {
-      setTimeout(() => scrollToBottom("auto"), 50);
-      setTimeout(() => scrollToBottom("auto"), 150);
+      setTimeout(() => scrollToBottom("auto"), 100);
     }
   }, [isOpen]);
 
@@ -167,8 +166,26 @@ Niek specializes in digital product design, brand identity, and creating polishe
         onPageChange(href.substring(1));
       } else if (href?.startsWith('/')) {
         e.preventDefault();
-        const page = href === '/' ? 'home' : href.substring(1);
-        onPageChange?.(page);
+        const path = href;
+        
+        if (path === '/') {
+          onPageChange?.('home');
+        } else if (path.startsWith('/projects/') || path.startsWith('/project/')) {
+          const slug = path.split('/').pop();
+          if (slug) {
+            window.history.pushState({}, "", `/projects/${slug}`);
+            window.dispatchEvent(new PopStateEvent("popstate"));
+          }
+        } else if (path.startsWith('/blog/')) {
+          const slug = path.split('/').pop();
+          if (slug) {
+            window.history.pushState({}, "", `/blog/${slug}`);
+            window.dispatchEvent(new PopStateEvent("popstate"));
+          }
+        } else {
+          const page = path.substring(1);
+          onPageChange?.(page);
+        }
       }
     }
   };

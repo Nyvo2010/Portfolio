@@ -2,8 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import yaml from "js-yaml";
 import { motion } from "motion/react";
 import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import { getItemClass } from "./Gallery";
+import { slugify } from "../utils/slugify";
+import { markdownPlugins, markdownComponents } from "../utils/markdown";
 
 import Footer from "./Footer";
 
@@ -14,13 +14,6 @@ interface Post {
   content: string;
   id: string;
   tags?: string[];
-}
-
-function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
 }
 
 interface BlogProps {
@@ -59,7 +52,6 @@ export default function Blog({ onPageChange, activePage, onPostClick, selectedSl
     const parsedPosts = Object.entries(rawPosts).map(([path, module]: [string, any]) => {
       const content = module && typeof module === 'object' && 'default' in module ? module.default : module;
       if (typeof content !== 'string') {
-        console.error(`Expected string content for ${path}, got ${typeof content}`);
         return null;
       }
       try {
@@ -67,7 +59,6 @@ export default function Blog({ onPageChange, activePage, onPostClick, selectedSl
         const id = path.split("/").pop()?.replace(".yaml", "") || Math.random().toString();
         return { ...data, id };
       } catch (e) {
-        console.error(`Error parsing YAML for ${path}:`, e);
         return null;
       }
     }).filter((post): post is Post => post !== null);
@@ -175,71 +166,8 @@ export default function Blog({ onPageChange, activePage, onPostClick, selectedSl
             >
               <div className="prose-lg font-medium max-w-none">
                 <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  components={{
-                    a: ({node, ...props}) => (
-                      <a 
-                        href={props.href} 
-                        className="text-black underline decoration-black/20 hover:decoration-black transition-all duration-300"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        {...props}
-                      />
-                    ),
-                    h3: ({node, ...props}) => <h3 className="text-3xl mt-20 mb-8 tracking-tighter font-medium uppercase leading-none" {...props} />,
-                    h4: ({node, ...props}) => <h4 className="text-2xl mt-12 mb-6 tracking-tight uppercase font-medium" {...props} />,
-                    p: ({node, children, ...props}) => {
-                      // Filter out string children that are just whitespace
-                      const realChildren = (Array.isArray(children) ? children : [children]).filter(child => 
-                        !(typeof child === 'string' && child.trim() === '')
-                      );
-
-                      const isImagesOnly = realChildren.every(child => 
-                        (typeof child === 'object' && child !== null && 'type' in (child as any) && (child as any).type === 'img')
-                      );
-
-                      if (isImagesOnly) {
-                        const images = realChildren.filter(child => typeof child === 'object' && child !== null && 'type' in child && (child as any).type === 'img');
-                        const total = images.length;
-                        
-                        if (total === 1) {
-                          return (
-                            <div className="my-12 bg-neutral-900 border-[6px] border-neutral-900 overflow-hidden rounded-md">
-                              <img 
-                                src={images[0].props.src} 
-                                alt={images[0].props.alt} 
-                                className="w-full h-auto block" 
-                              />
-                            </div>
-                          );
-                        }
-                        
-                        return (
-                          <div className="grid grid-cols-12 gap-[6px] my-12 bg-neutral-900 border-[6px] border-neutral-900 overflow-hidden rounded-md p-0">
-                            {images.map((img: any, idx: number) => (
-                              <div key={idx} className={`${getItemClass(total, idx)} overflow-hidden bg-neutral-800`}>
-                                <img 
-                                  src={img.props.src} 
-                                  alt={img.props.alt} 
-                                  className="w-full h-full object-cover transition-all duration-1000 ease-out" 
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        );
-                      }
-                      return <p className="mb-8 last:mb-0 text-xl leading-[1.6] opacity-60" {...props}>{children}</p>;
-                    },
-                    ul: ({node, ...props}) => <ul className="list-none pl-0 mb-10 space-y-4" {...props} />,
-                    li: ({node, children, ...props}) => (
-                      <li className="flex items-start gap-4 text-xl opacity-60" {...props}>
-                        <span className="w-1.5 h-1.5 rounded-full bg-black/20 mt-3 shrink-0" />
-                        {children}
-                      </li>
-                    ),
-                    hr: ({node, ...props}) => <hr className="my-16 border-black/5" {...props} />,
-                    blockquote: ({node, ...props}) => <blockquote className="border-l-[1px] border-black/20 pl-10 italic mb-10 text-3xl tracking-tight opacity-80 py-4" {...props} />,
-                  }}
+                  remarkPlugins={markdownPlugins}
+                  components={markdownComponents}
                 >
                   {selectedPost.content}
                 </ReactMarkdown>
