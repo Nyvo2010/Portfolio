@@ -45,7 +45,7 @@ function parseUrl(): RouteState {
     if (segments[0] === "lab") {
       return { page: "lab" };
     }
-    return { page: "home" };
+    return { page: "404" };
   }
 
   const path = window.location.pathname;
@@ -73,6 +73,10 @@ function parseUrl(): RouteState {
     return { page: "lab" };
   }
 
+  if (segments[0] === "about") {
+    return { page: "home" };
+  }
+
   return { page: "404" };
 }
 
@@ -83,7 +87,7 @@ function navigate(path: string) {
 
 export default function App() {
   const [progress, setProgress] = useState(0);
-  const [isLoadingVisible, setIsLoadingVisible] = useState(true);
+  const [isLoadingVisible, setIsLoadingVisible] = useState(route.page === "home");
   const [isStackComplete, setIsStackComplete] = useState(false);
   const [isReadyForOrbit, setIsReadyForOrbit] = useState(false);
   const [route, setRoute] = useState<RouteState>(() => parseUrl());
@@ -171,7 +175,7 @@ export default function App() {
 
   return (
     <div className="relative w-full h-screen overflow-hidden bg-[#f7f7f5]">
-      <LoadingScreen isVisible={isLoadingVisible} progress={progress} />
+      {route.page === "home" && <LoadingScreen isVisible={isLoadingVisible} progress={progress} />}
       
       {/* Background/Main Content */}
       <AnimatePresence mode="wait">
