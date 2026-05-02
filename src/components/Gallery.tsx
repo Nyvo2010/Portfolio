@@ -30,7 +30,6 @@ const PROJECTS = [...parsedProjects].sort((a, b) => {
 export { getItemClass } from "../utils/grid";
 
 import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 
 import Footer from "./Footer";
 import { slugify } from "../utils/slugify";

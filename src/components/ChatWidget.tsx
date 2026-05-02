@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { X, Send } from "lucide-react";
+import { X } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -137,7 +137,6 @@ Niek specializes in digital product design, brand identity, and creating polishe
         }
       }
     } catch (error) {
-      console.error("AI Error:", error);
       const errorMsg: Message = {
         id: (Date.now() + 1).toString(),
         sender: "nyv",
