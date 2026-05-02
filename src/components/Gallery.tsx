@@ -223,7 +223,7 @@ export default function Gallery({ onStackComplete, isReadyForOrbit, onProjectCli
               initial={{ opacity: 0, y: 50 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 1, ease: [0.23, 1, 0.32, 1] }}
-              className="flex flex-col mb-24 w-full max-w-3xl"
+              className="flex flex-col mb-10 md:mb-16 w-full max-w-3xl"
             >
               <div className="flex flex-col">
                 <span className="text-[10px] uppercase tracking-[0.3em] opacity-40 mb-6 font-bold">Project Case Study</span>
