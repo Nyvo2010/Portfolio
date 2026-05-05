@@ -10,6 +10,7 @@ type Message = {
   id: string;
   sender: "user" | "nyv";
   text: string;
+  navs?: string[];
   timestamp: Date;
 };
 
@@ -59,7 +60,7 @@ export default function ChatWidget({ onPageChange }: ChatWidgetProps) {
 
     const userText = inputValue.trim();
     setInputValue("");
-    
+
     const newUserMsg: Message = {
       id: Date.now().toString(),
       sender: "user",
@@ -70,81 +71,86 @@ export default function ChatWidget({ onPageChange }: ChatWidgetProps) {
     setMessages(prev => [...prev, newUserMsg]);
     setIsLoading(true);
 
+    let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
     try {
-      const systemPrompt = `You are Nyv, the AI assistant for Niek (a digital product designer and front-end developer). Niek's nickname is Nyvo.
-Core rules:
-1. Be concise, friendly, and helpful.
-2. NEVER use emojis.
-3. NEVER make up pages, links, or facts. If you aren't sure, say you don't know.
-4. ONLY provide links to these exact pages: 
-    - Home: /
-    - Lab: /lab (experimental interactions and coding playgrounds)
-    - Blog: /blog (articles about design and engineering)
-5. Format links like this: [lab](/lab).
-6. Format lists using standard markdown asterisks or dashes.
-7. ALWAYS respond in full, complete sentences.
+      const res = await fetch('https://portfolio-groq-proxy.niekyuwen.workers.dev', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: userText })
+      });
 
-Niek specializes in digital product design, brand identity, and creating polished, minimal, and intentional digital experiences. Help visitors learn about Niek's work.`;
-      
-      const promptQuery = systemPrompt + "\n\n" + messages.map(m => (m.sender === 'user' ? 'User: ' : 'Nyv: ') + m.text).join('\n') + "\nUser: " + userText;
-      
-      const response = await fetch(`https://text.pollinations.ai/${encodeURIComponent(promptQuery)}?stream=true`);
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch response: ${response.status} ${response.statusText}`);
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        const errText = errJson.message || 'Sorry, I had trouble connecting. Please try again later.';
+        const errorMsg: Message = { id: (Date.now() + 1).toString(), sender: 'nyv', text: errText, timestamp: new Date() };
+        setMessages(prev => [...prev, errorMsg]);
+        return;
       }
-      
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error("No reader available");
+
+      reader = res.body?.getReader();
+      if (!reader) throw new Error('No reader available');
 
       const decoder = new TextDecoder();
-      let currentText = "";
+      let buffer = '';
+      let currentText = '';
+      const navs: string[] = [];
       const newAiMsgId = (Date.now() + 1).toString();
-      setIsLoading(false);
 
-      setMessages(prev => [...prev, {
-        id: newAiMsgId,
-        sender: "nyv",
-        text: "",
-        timestamp: new Date()
-      }]);
+      setMessages(prev => [...prev, { id: newAiMsgId, sender: 'nyv', text: '', navs: [], timestamp: new Date() }]);
 
-      let buffer = "";
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        
+
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
-        buffer = lines.pop() || "";
-        
+        buffer = lines.pop() || '';
+
         for (const line of lines) {
           const trimmedLine = line.trim();
-          if (trimmedLine.startsWith('data: ') && trimmedLine !== 'data: [DONE]') {
+          if (trimmedLine === 'data: [DONE]') continue;
+          if (!trimmedLine.startsWith('data: ')) continue; // ignore non-data lines
+
+          const payload = trimmedLine.slice(6).trim();
+          let appended = '';
             try {
-              const data = JSON.parse(trimmedLine.slice(6));
-              const delta = data.choices?.[0]?.delta?.content || "";
-              if (delta) {
-                currentText += delta;
-                setMessages(prev => prev.map(msg => 
-                  msg.id === newAiMsgId ? { ...msg, text: currentText } : msg
-                ));
-              }
+              const data = JSON.parse(payload);
+              // Prefer content only. Ignore any delta.reasoning to avoid duplicated/verbose output.
+              appended = data.choices?.[0]?.delta?.content || data.choices?.[0]?.text || '';
             } catch (e) {
-              // Ignore parse errors on incomplete chunks
+              appended = payload;
             }
+
+          if (!appended) continue;
+
+          // Sanitize join rules
+          const lastChar = currentText.slice(-1);
+          if (/\s/.test(lastChar) && /^[,.!?;:]/.test(appended)) {
+            appended = appended.replace(/^\s+/, '');
           }
+          if (/\b[A-Za-z]\s$/.test(currentText) && /^[A-Za-z]/.test(appended)) {
+            currentText = currentText.replace(/\s+$/, '');
+          }
+          appended = appended.replace(/\s+([,.!?;:])/g, '$1').replace(/\s{2,}/g, ' ');
+
+          currentText += appended;
+
+          // Extract NAVs and remove them from displayed text
+          const navRegex = /^NAV:\s*(\/\S+)/gmi;
+          let cleanedText = currentText.replace(navRegex, (m, p1) => {
+            if (p1 && !navs.includes(p1)) navs.push(p1);
+            return '';
+          });
+          cleanedText = cleanedText.replace(/\n{3,}/g, '\n\n').trimStart();
+
+          setMessages(prev => prev.map(msg => msg.id === newAiMsgId ? { ...msg, text: cleanedText, navs: [...navs] } : msg));
         }
       }
-    } catch (error) {
-      const errorMsg: Message = {
-        id: (Date.now() + 1).toString(),
-        sender: "nyv",
-        text: "Sorry, I had trouble connecting. Please try again later.",
-        timestamp: new Date()
-      };
+    } catch (err) {
+      const errorMsg: Message = { id: (Date.now() + 1).toString(), sender: 'nyv', text: 'Sorry, I had trouble connecting. Please try again later.', timestamp: new Date() };
       setMessages(prev => [...prev, errorMsg]);
     } finally {
+      try { await reader?.cancel(); } catch {};
       setIsLoading(false);
     }
   };
@@ -290,6 +296,7 @@ Niek specializes in digital product design, brand identity, and creating polishe
                       <span className="text-white/30">{formatTime(msg.timestamp)}</span>
                     </div>
                     <div className={`text-[15px] leading-relaxed ${msg.sender === 'user' ? 'text-white/50' : 'text-[#f2f2f0]'}`}>
+                      {/* Links are rendered inline via markdown in msg.text */}
                       <ReactMarkdown 
                         remarkPlugins={[remarkGfm]}
                         components={{
@@ -300,7 +307,7 @@ Niek specializes in digital product design, brand identity, and creating polishe
                           li: ({node, ...props}) => <li className="mb-1" {...props} />
                         }}
                       >
-                        {msg.text}
+                         {msg.text}
                       </ReactMarkdown>
                     </div>
                   </motion.div>
@@ -317,15 +324,8 @@ Niek specializes in digital product design, brand identity, and creating polishe
                       <span className="font-medium text-[#f2f2f0]">Nyv</span>
                       <span className="text-white/30">{formatTime(new Date())}</span>
                     </div>
-                    <div className="text-[15px] leading-relaxed text-[#f2f2f0]">
-                      <motion.span 
-                        animate={{ opacity: [0.3, 1, 0.3] }}
-                        transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                        className="opacity-50"
-                      >
-                        Thinking
-                      </motion.span>
-                    </div>
+                    {/* Minimal placeholder while loading; no 'Thinking' text per request */}
+                    <div style={{height: 8}} />
                   </motion.div>
                 )}
 

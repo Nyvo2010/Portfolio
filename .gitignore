@@ -6,3 +6,8 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Cloudflare worker and config (do not commit secrets or published worker files)
+/cloudflare-worker/
+wrangler.toml
+/*.kv
