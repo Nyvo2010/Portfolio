@@ -305,8 +305,7 @@ export default function ChatWidget({ onPageChange }: ChatWidgetProps) {
                       {/* Links are rendered inline via markdown in msg.text */}
                       {msg.loading ? (
                         <div className="flex items-center gap-3">
-                          <span className="text-white/60 opacity-70">Thinking...</span>
-                          <div className="w-16 h-3 rounded nyv-shimmer" />
+                      <span className="nyv-shimmer-text" style={{opacity: 0.85}}>Thinking...</span>
                         </div>
                       ) : (
                         <ReactMarkdown 
@@ -339,7 +338,7 @@ export default function ChatWidget({ onPageChange }: ChatWidgetProps) {
                       {[...Array(9)].map((_, i) => (
                         <div 
                           key={i} 
-                          className={`w-[4px] h-[4px] rounded-full ${i === 4 ? 'bg-transparent' : 'bg-current'} ${isLoading ? 'animate-pulse' : ''}`}
+                          className={`w-[4px] h-[4px] rounded-full ${i === 4 ? 'bg-transparent' : 'bg-current'} ${isLoading ? 'nyv-shimmer-dot' : ''}`}
                         />
                       ))}
                     </div>
@@ -384,8 +383,17 @@ export default function ChatWidget({ onPageChange }: ChatWidgetProps) {
             100% { background-position: -200% 0; }
           }
           .nyv-shimmer-dot {
-            background: rgba(255,255,255,0.12);
-            box-shadow: 0 0 8px rgba(255,255,255,0.03) inset;
+            background: linear-gradient(90deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.04) 100%);
+            background-size: 200% 100%;
+            animation: nyv-shimmer 1.1s linear infinite;
+          }
+          .nyv-shimmer-text {
+            display: inline-block;
+            /* use background-clip to show gradient inside text */
+            background: linear-gradient(90deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.06) 100%);
+            background-size: 200% 100%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
             animation: nyv-shimmer 1.1s linear infinite;
           }
         `}} />
