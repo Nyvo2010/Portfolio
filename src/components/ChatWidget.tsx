@@ -12,6 +12,7 @@ type Message = {
   text: string;
   navs?: string[];
   timestamp: Date;
+  loading?: boolean; // indicates a placeholder 'Thinking' state before streaming
 };
 
 const formatTime = (date: Date) => {
@@ -73,7 +74,8 @@ export default function ChatWidget({ onPageChange }: ChatWidgetProps) {
 
     // Create and show the placeholder AI message immediately so the Nyv header appears
     const newAiMsgId = (Date.now() + 1).toString();
-    setMessages(prev => [...prev, { id: newAiMsgId, sender: 'nyv', text: '', navs: [], timestamp: new Date() }]);
+    // Add placeholder AI message marked as loading so the UI can render a Thinking shimmer
+    setMessages(prev => [...prev, { id: newAiMsgId, sender: 'nyv', text: '', navs: [], timestamp: new Date(), loading: true }]);
 
     let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
     try {
@@ -144,7 +146,7 @@ export default function ChatWidget({ onPageChange }: ChatWidgetProps) {
           });
           cleanedText = cleanedText.replace(/\n{3,}/g, '\n\n').trimStart();
 
-           setMessages(prev => prev.map(msg => msg.id === newAiMsgId ? { ...msg, text: cleanedText, navs: [...navs] } : msg));
+          setMessages(prev => prev.map(msg => msg.id === newAiMsgId ? { ...msg, text: cleanedText, navs: [...navs], loading: false } : msg));
         }
       }
     } catch (err) {
@@ -298,10 +300,10 @@ export default function ChatWidget({ onPageChange }: ChatWidgetProps) {
                     </div>
                     <div className={`text-[15px] leading-relaxed ${msg.sender === 'user' ? 'text-white/50' : 'text-[#f2f2f0]'}`}>
                       {/* Links are rendered inline via markdown in msg.text */}
-                      {msg.sender === 'nyv' && !msg.text.trim() && isLoading ? (
-                        // Thinking shimmer when placeholder AI message present and still loading
-                        <div className="w-full">
-                          <div className="h-4 w-40 rounded-md shimmer-bg" />
+                      {msg.loading ? (
+                        <div className="flex items-center gap-3">
+                          <span className="text-white/60 italic">Thinking...</span>
+                          <div className="w-16 h-3 bg-white/6 rounded animate-pulse" />
                         </div>
                       ) : (
                         <ReactMarkdown 
