@@ -252,7 +252,7 @@ export default function ChatWidget({ onPageChange }: ChatWidgetProps) {
             >
               {/* Header */}
               <div className="absolute top-4 left-5 right-4 flex items-center justify-between z-10 pb-2">
-                <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3">
                   <span className="text-[13px] font-medium uppercase tracking-widest text-[#f2f2f0]">Nyv</span>
                 </div>
 
@@ -318,14 +318,10 @@ export default function ChatWidget({ onPageChange }: ChatWidgetProps) {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3, type: "spring", bounce: 0 }}
-                    className="flex flex-col gap-1.5"
+                    className="flex items-center gap-3 text-[13px]"
                   >
-                    <div className="flex items-center gap-3 text-[13px]">
-                      <span className="font-medium text-[#f2f2f0]">Nyv</span>
-                      <span className="text-white/30">{formatTime(new Date())}</span>
-                    </div>
-                    {/* Minimal placeholder while loading; no 'Thinking' text per request */}
-                    <div style={{height: 8}} />
+                    <span className="font-medium text-[#f2f2f0]">Nyv</span>
+                    <span className="text-white/30">{formatTime(new Date())}</span>
                   </motion.div>
                 )}
 
