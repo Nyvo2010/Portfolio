@@ -14,9 +14,10 @@ export default function LoadingScreen({ isVisible, progress }: LoadingScreenProp
   return (
     <motion.div
       id="loading-screen"
-      initial={{ y: "0%" }}
+      // Start off-screen when not visible to avoid a brief flash on mount when routing
+      initial={{ y: isVisible ? "0%" : "-100%" }}
       animate={{ y: isVisible ? "0%" : "-100%" }}
-      transition={{ duration: 1.2, ease: [0.76, 0, 0.24, 1], delay: 0.2 }}
+      transition={{ duration: 0.9, ease: [0.76, 0, 0.24, 1] }}
       className="fixed inset-0 z-[2000] flex flex-col items-center justify-center bg-[#111111] text-white"
     >
       <div className="flex flex-col items-center">

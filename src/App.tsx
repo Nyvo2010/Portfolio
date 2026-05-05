@@ -77,15 +77,12 @@ export default function App() {
   const initialRoute = parseUrl();
   const hasLoadedRef = useRef(false);
   const [progress, setProgress] = useState(0);
-  const [isLoadingVisible, setIsLoadingVisible] = useState(false);
-  // Show loading screen only if the site hasn't finished loading after a short delay
-  useEffect(() => {
-    if (initialRoute.page !== "home") return; // only consider showing for home route
-    if (hasLoadedRef.current) return;
+  const [isLoadingVisible, setIsLoadingVisible] = useState(() => {
+    // Show loading screen only for initial first-load on home page
+    if (hasLoadedRef.current) return false;
     hasLoadedRef.current = true;
-    const timer = setTimeout(() => setIsLoadingVisible(true), 300); // show after 300ms
-    return () => clearTimeout(timer);
-  }, [initialRoute.page]);
+    return initialRoute.page === "home";
+  });
   const [isStackComplete, setIsStackComplete] = useState(false);
   const [isReadyForOrbit, setIsReadyForOrbit] = useState(false);
   const [route, setRoute] = useState<RouteState>(initialRoute);
