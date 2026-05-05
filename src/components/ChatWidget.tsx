@@ -71,6 +71,10 @@ export default function ChatWidget({ onPageChange }: ChatWidgetProps) {
     setMessages(prev => [...prev, newUserMsg]);
     setIsLoading(true);
 
+    // Create and show the placeholder AI message immediately so the Nyv header appears
+    const newAiMsgId = (Date.now() + 1).toString();
+    setMessages(prev => [...prev, { id: newAiMsgId, sender: 'nyv', text: '', navs: [], timestamp: new Date() }]);
+
     let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
     try {
       const res = await fetch('https://portfolio-groq-proxy.niekyuwen.workers.dev', {
@@ -82,8 +86,9 @@ export default function ChatWidget({ onPageChange }: ChatWidgetProps) {
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}));
         const errText = errJson.message || 'Sorry, I had trouble connecting. Please try again later.';
-        const errorMsg: Message = { id: (Date.now() + 1).toString(), sender: 'nyv', text: errText, timestamp: new Date() };
-        setMessages(prev => [...prev, errorMsg]);
+        const errorMsg: Message = { id: newAiMsgId, sender: 'nyv', text: errText, timestamp: new Date() };
+        // replace placeholder with error message
+        setMessages(prev => prev.map(m => m.id === newAiMsgId ? errorMsg : m));
         return;
       }
 
@@ -94,10 +99,6 @@ export default function ChatWidget({ onPageChange }: ChatWidgetProps) {
       let buffer = '';
       let currentText = '';
       const navs: string[] = [];
-      const newAiMsgId = (Date.now() + 1).toString();
-
-      setMessages(prev => [...prev, { id: newAiMsgId, sender: 'nyv', text: '', navs: [], timestamp: new Date() }]);
-
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -143,12 +144,12 @@ export default function ChatWidget({ onPageChange }: ChatWidgetProps) {
           });
           cleanedText = cleanedText.replace(/\n{3,}/g, '\n\n').trimStart();
 
-          setMessages(prev => prev.map(msg => msg.id === newAiMsgId ? { ...msg, text: cleanedText, navs: [...navs] } : msg));
+           setMessages(prev => prev.map(msg => msg.id === newAiMsgId ? { ...msg, text: cleanedText, navs: [...navs] } : msg));
         }
       }
     } catch (err) {
-      const errorMsg: Message = { id: (Date.now() + 1).toString(), sender: 'nyv', text: 'Sorry, I had trouble connecting. Please try again later.', timestamp: new Date() };
-      setMessages(prev => [...prev, errorMsg]);
+      const errorMsg: Message = { id: newAiMsgId, sender: 'nyv', text: 'Sorry, I had trouble connecting. Please try again later.', timestamp: new Date() };
+      setMessages(prev => prev.map(m => m.id === newAiMsgId ? errorMsg : m));
     } finally {
       try { await reader?.cancel(); } catch {};
       setIsLoading(false);
@@ -297,18 +298,25 @@ export default function ChatWidget({ onPageChange }: ChatWidgetProps) {
                     </div>
                     <div className={`text-[15px] leading-relaxed ${msg.sender === 'user' ? 'text-white/50' : 'text-[#f2f2f0]'}`}>
                       {/* Links are rendered inline via markdown in msg.text */}
-                      <ReactMarkdown 
-                        remarkPlugins={[remarkGfm]}
-                        components={{
-                          a: ({node, ...props}) => <a {...props} className="underline decoration-white/30 text-white hover:decoration-white/80 transition-colors cursor-pointer" />,
-                          p: ({node, ...props}) => <p className="mb-2 last:mb-0" {...props} />,
-                          ul: ({node, ...props}) => <ul className="list-disc pl-5 mb-2 last:mb-0" {...props} />,
-                          ol: ({node, ...props}) => <ol className="list-decimal pl-5 mb-2 last:mb-0" {...props} />,
-                          li: ({node, ...props}) => <li className="mb-1" {...props} />
-                        }}
-                      >
-                         {msg.text}
-                      </ReactMarkdown>
+                      {msg.sender === 'nyv' && !msg.text.trim() && isLoading ? (
+                        // Thinking shimmer when placeholder AI message present and still loading
+                        <div className="w-full">
+                          <div className="h-4 w-40 rounded-md shimmer-bg" />
+                        </div>
+                      ) : (
+                        <ReactMarkdown 
+                          remarkPlugins={[remarkGfm]}
+                          components={{
+                            a: ({node, ...props}) => <a {...props} className="underline decoration-white/30 text-white hover:decoration-white/80 transition-colors cursor-pointer" />,
+                            p: ({node, ...props}) => <p className="mb-2 last:mb-0" {...props} />,
+                            ul: ({node, ...props}) => <ul className="list-disc pl-5 mb-2 last:mb-0" {...props} />,
+                            ol: ({node, ...props}) => <ol className="list-decimal pl-5 mb-2 last:mb-0" {...props} />,
+                            li: ({node, ...props}) => <li className="mb-1" {...props} />
+                          }}
+                        >
+                           {msg.text}
+                        </ReactMarkdown>
+                      )}
                     </div>
                   </motion.div>
                 ))}
