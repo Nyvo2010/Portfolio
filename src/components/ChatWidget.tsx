@@ -374,7 +374,7 @@ export default function ChatWidget({ onPageChange }: ChatWidgetProps) {
           }
           /* Nyv shimmer styles */
           .nyv-shimmer {
-            background: linear-gradient(90deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.04) 100%);
+            background: linear-gradient(90deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.24) 50%, rgba(255,255,255,0.08) 100%);
             background-size: 200% 100%;
             animation: nyv-shimmer 1.1s linear infinite;
           }
@@ -383,14 +383,14 @@ export default function ChatWidget({ onPageChange }: ChatWidgetProps) {
             100% { background-position: -200% 0; }
           }
           .nyv-shimmer-dot {
-            background: linear-gradient(90deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.04) 100%);
+            background: linear-gradient(90deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.24) 50%, rgba(255,255,255,0.08) 100%);
             background-size: 200% 100%;
             animation: nyv-shimmer 1.1s linear infinite;
           }
           .nyv-shimmer-text {
             display: inline-block;
             /* use background-clip to show gradient inside text */
-            background: linear-gradient(90deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.06) 100%);
+            background: linear-gradient(90deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.32) 50%, rgba(255,255,255,0.12) 100%);
             background-size: 200% 100%;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
