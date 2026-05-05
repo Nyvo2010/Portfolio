@@ -237,15 +237,12 @@ export default function ChatWidget({ onPageChange }: ChatWidgetProps) {
               className="absolute inset-0 w-full h-full flex items-center justify-center text-white outline-none cursor-pointer"
             >
                    <div className="grid grid-cols-3 gap-[3px] w-[18px]">
-                      {[...Array(9)].map((_, i) => {
-                        const isCenter = i === 4;
-                        return (
-                          <div 
-                            key={i} 
-                            className={`w-[4px] h-[4px] rounded-full ${isCenter ? 'bg-transparent' : 'bg-current'} ${isLoading ? 'nyv-shimmer-dot' : ''}`}
-                          />
-                        );
-                      })}
+                      {[...Array(9)].map((_, i) => (
+                        <div 
+                          key={i} 
+                          className={`w-[4px] h-[4px] rounded-full ${i === 4 ? 'bg-transparent' : 'bg-current'} ${isLoading ? 'animate-pulse' : ''}`}
+                        />
+                      ))}
                     </div>
             </motion.button>
           ) : (
@@ -338,7 +335,7 @@ export default function ChatWidget({ onPageChange }: ChatWidgetProps) {
                       {[...Array(9)].map((_, i) => (
                         <div 
                           key={i} 
-                          className={`w-[4px] h-[4px] rounded-full ${i === 4 ? 'bg-transparent' : 'bg-current'} ${isLoading ? 'nyv-shimmer-dot' : ''}`}
+                          className={`w-[4px] h-[4px] rounded-full ${i === 4 ? 'bg-transparent' : 'bg-current'} ${isLoading ? 'animate-pulse' : ''}`}
                         />
                       ))}
                     </div>
@@ -374,27 +371,27 @@ export default function ChatWidget({ onPageChange }: ChatWidgetProps) {
           }
           /* Nyv shimmer styles */
           .nyv-shimmer {
-            background: linear-gradient(90deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.40) 50%, rgba(255,255,255,0.14) 100%);
+            background: linear-gradient(90deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.36) 50%, rgba(255,255,255,0.12) 100%);
             background-size: 200% 100%;
-            animation: nyv-shimmer 0.9s linear infinite;
+            animation: nyv-shimmer 1.4s linear infinite;
           }
           @keyframes nyv-shimmer {
             0% { background-position: 200% 0; }
             100% { background-position: -200% 0; }
           }
           .nyv-shimmer-dot {
-            background: linear-gradient(90deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.40) 50%, rgba(255,255,255,0.14) 100%);
+            background: linear-gradient(90deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.36) 50%, rgba(255,255,255,0.12) 100%);
             background-size: 200% 100%;
-            animation: nyv-shimmer 0.9s linear infinite;
+            animation: nyv-shimmer 1.4s linear infinite;
           }
           .nyv-shimmer-text {
             display: inline-block;
             /* use background-clip to show gradient inside text */
-            background: linear-gradient(90deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.48) 50%, rgba(255,255,255,0.18) 100%);
+            background: linear-gradient(90deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.44) 50%, rgba(255,255,255,0.16) 100%);
             background-size: 200% 100%;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            animation: nyv-shimmer 0.9s linear infinite;
+            animation: nyv-shimmer 1.4s linear infinite;
           }
         `}} />
       </motion.div>
