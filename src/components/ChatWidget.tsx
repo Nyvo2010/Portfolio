@@ -313,17 +313,7 @@ export default function ChatWidget({ onPageChange }: ChatWidgetProps) {
                   </motion.div>
                 ))}
 
-                {isLoading && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, type: "spring", bounce: 0 }}
-                    className="flex items-center gap-3 text-[13px]"
-                  >
-                    <span className="font-medium text-[#f2f2f0]">Nyv</span>
-                    <span className="text-white/30">{formatTime(new Date())}</span>
-                  </motion.div>
-                )}
+                {/* Loading indicator is handled by the message stream itself; no duplicate header here */}
 
                 <div ref={messagesEndRef} />
               </div>
