@@ -11,3 +11,4 @@ coverage/
 /cloudflare-worker/
 wrangler.toml
 /*.kv
+AGENTS.md
