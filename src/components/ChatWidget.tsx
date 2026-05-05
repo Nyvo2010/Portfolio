@@ -236,14 +236,17 @@ export default function ChatWidget({ onPageChange }: ChatWidgetProps) {
               onClick={() => setIsOpen(true)}
               className="absolute inset-0 w-full h-full flex items-center justify-center text-white outline-none cursor-pointer"
             >
-              <div className="grid grid-cols-3 gap-[3px] w-[18px]">
-                {[...Array(9)].map((_, i) => (
-                  <div 
-                    key={i} 
-                    className={`w-[4px] h-[4px] rounded-full ${i === 4 ? 'bg-transparent' : 'bg-current'} ${isLoading ? 'animate-pulse' : ''}`}
-                  />
-                ))}
-              </div>
+                   <div className="grid grid-cols-3 gap-[3px] w-[18px]">
+                      {[...Array(9)].map((_, i) => {
+                        const isCenter = i === 4;
+                        return (
+                          <div 
+                            key={i} 
+                            className={`w-[4px] h-[4px] rounded-full ${isCenter ? 'bg-transparent' : 'bg-current'} ${isLoading ? 'nyv-shimmer-dot' : ''}`}
+                          />
+                        );
+                      })}
+                    </div>
             </motion.button>
           ) : (
             <motion.div
@@ -302,8 +305,8 @@ export default function ChatWidget({ onPageChange }: ChatWidgetProps) {
                       {/* Links are rendered inline via markdown in msg.text */}
                       {msg.loading ? (
                         <div className="flex items-center gap-3">
-                          <span className="text-white/60 italic">Thinking...</span>
-                          <div className="w-16 h-3 bg-white/6 rounded animate-pulse" />
+                          <span className="text-white/60 opacity-70">Thinking...</span>
+                          <div className="w-16 h-3 rounded nyv-shimmer" />
                         </div>
                       ) : (
                         <ReactMarkdown 
@@ -369,6 +372,21 @@ export default function ChatWidget({ onPageChange }: ChatWidgetProps) {
           }
           .custom-scrollbar::-webkit-scrollbar-thumb:hover {
             background: rgba(255, 255, 255, 0.2);
+          }
+          /* Nyv shimmer styles */
+          .nyv-shimmer {
+            background: linear-gradient(90deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.04) 100%);
+            background-size: 200% 100%;
+            animation: nyv-shimmer 1.1s linear infinite;
+          }
+          @keyframes nyv-shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+          }
+          .nyv-shimmer-dot {
+            background: rgba(255,255,255,0.12);
+            box-shadow: 0 0 8px rgba(255,255,255,0.03) inset;
+            animation: nyv-shimmer 1.1s linear infinite;
           }
         `}} />
       </motion.div>
