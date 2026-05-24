@@ -1,0 +1,110 @@
+title: "AI-Assisted Development"
+date: "2026-05-24"
+tags: ["AI", "development", "guide"]
+summary: "A comprehensive guide for the vibe-coding era."
+content: |-
+
+  ![img1](/assets/AI-Assisted-Development-Cover.png)
+
+  ### The Efficiency Gap
+
+  AI-assisted development isn't a luxury anymore. It's the baseline. Roughly **84%** of developers now use or plan to use AI tools in their workflow, and more than half reach for them every single day [1](https://survey.stackoverflow.co/2024/ai) [2](https://www.getpanto.ai/blog/ai-coding-assistant-statistics). The adoptation has already happened.
+
+  The interesting part is what happens **after** adoption. AI has gotten very good, and there is absolutely no reason to say anymore that your AI "isn't working", it is **you** that is (litterally) not working. AI only amplifies your skills, it does not replace them or anything. **AI will not work if you don't first.**
+
+  I have been experimenting with different AI tools, workflows, and methods for **over 600 hours**. And I was hoping to share my knowledge and resources in this post with you.
+
+  ### The Planning Dividend
+
+  The single biggest money-pit in this workflow is opening your editor and prompting. The "build-and-refactor" reflex only works when a human being can maintain the entire mental model of the program, but an AI can't, holding only what you tell it within the context of a given chat.
+
+  Without planning, files will duplicate, naming will drift, two halves of the same feature may use different patterns simply because the AI decided it preferred a different convention last Tuesday.
+
+  I know planning is boring... and slow... but it's also the cheapest form of insurance you can buy. A well-planned project will need many fewer prompts, as the AI will be implementing a plan rather than creating one from scratch and guessing.
+
+  You need to begin by defining a genuine **Minimum Viable Product**. The MVP is not "the first version" or a "light version;" it is the smallest possible thing that provides the product's core value, and nothing else.
+
+  Unless it's necessary for solving the problem your product is designed to address, that feature isn't needed in the MVP. Auth probably is. Dark mode, email digests, three dashboard themes, login via six social networks; those don't belong. The point is to get something end-to-end working so you can validate the idea, expose genuine bugs, and learn what your users actually want before you invest hours building things they don't care about.
+
+  Here's the piece that most articles skip: MVP scope is not merely product discipline; it's context engineering.
+
+  AI agents operate with a finite context window. Each file, rule, and conversation you push to the AI's attention window is a token in a shared pot, and your project's entire surface area competes for its focus. A lean MVP keeps this surface area small enough that the AI can keep the entire project in mind simultaneously.
+
+  A bloated MVP has the opposite effect: the AI forgets which auth helper function it's supposed to be using, generates a duplicate of a function it has already written, or "refactors" a file it didn't realize three other files depended on. Feature creep does not simply eat your timeline. It actively degrades the AI's understanding of your project.
+
+  A tight MVP also means a shorter, more concise AGENTS.md. Fewer features translate to fewer rules, fewer tricky edge cases, and fewer contradictory instructions for the AI to process. Every line of scope you remove is a line of context you gain back.
+
+  Once you've outlined the MVP, break it down into a build order/plan. For a tasks app, don't start with "build me a full project;" instead, "build me a database schema and authentication, then the core task CRUD functions, then add filtering and search, then polish the UI." Each section should be small enough to be validated before you proceed.
+
+  Split the MVP into distinct modules: the database schema, API endpoints, UI components, etc. Small modules require a smaller context window per prompt, and limit the impact when things go wrong.
+
+  ### High-Fidelity Context and Prompting
+
+  The quality of AI-generated output is directly linked with the quality of the context it's given. Treating each prompt as a blank slate is the single biggest waste of this technology and is precisely what characterizes "lazy prompting"; a one-line request and an expectation of magic. The model does not know exactly what you want and will automattically start guessing (it can't read minds), resulting in inconsistent naming, integration errors, and bloated code that you'll spend hours cleaning up. At this point, you are bassically gambling on the output with time and money. Giving better instructions is the single best way to improve your odds.
+
+  The simplest solution is to create a root file for your project, such as **AGENTS.md**, that serves as your single source of truth. Keep it concise and specific: explain the project's goal in plain English, detail the exact tech stack and versions used, outline your coding standards (naming conventions, folder structure, formatting), and include a section with "hard rules" that tell the AI explicitly what it should never do. You can also append your MVP scope.
+
+  These "hard rules" are more crucial than you might expect. Some practical examples that are well worth stealing:
+
+  - Do not introduce new dependencies without explicit permission.
+  - Only modify files within the current feature folder.
+  - Do not use class-based components.
+  - Avoid inline styles; use the existing Tailwind tokens instead.
+  - If a function already exists, extend it; do not duplicate it.
+
+  For small changes, a single line is often sufficient. For new features, however, draft a proper specification. Compare:
+
+  - Lazy: "Build me a login page with validation."
+  - Professional: "Create a login page for the application using Next.js 15 and Tailwind CSS. Implement form validation using the pattern found in src/lib/validation.ts and match the layout to the provided Dribbble screenshot. Do not use any UI libraries beyond Tailwind. Ensure the error message tone aligns with the conventions established in AGENTS.md."
+
+  To guide the AI's logic, link to relevant GitHub repositories or paste "golden" code snippets that you want it to mimic. For design direction, provide Pinterest or Dribbble links, or upload screenshots. An AI cannot inherently understand a visual aesthetic; it needs a visual or descriptive anchor. Otherwise, you'll just end up with the same generic dashboard over and over.
+
+  Also, a tool I often use is OpenAI's [prompt optimizer](https://platform.openai.com/chat/edit?models=gpt-5.4-mini&optimize=true). In general, it works best for OpenAI models, but it can be a great way to quickly improve your prompts.
+
+  When integrating external services in your project, always provide the AI with documentation and examples. I have found that [Context 7](https://context7.com/) is a great tool for this so your AI agents can easily find documentation when they need it.
+
+  ### The Execution Loop
+
+  Execution is an iterative and disciplined process: generate, validate, commit. It is not an "on-and-forget" operation.
+
+  Your role is to act as the final quality reviewer. Read through the plan, understand the architecture, and keep tabs on what's happening in your code. Pasting in code you don't understand means you aren't building software; you're gambling with it.
+
+  Research supports this: AI-assisted pull requests contain approximately 1.7 times more issues than human-only PRs [2](https://www.getpanto.ai/blog/ai-coding-assistant-statistics), and AI-generated code has been found to have 2.74 times more security vulnerabilities than code written by humans [3](https://modall.ca/blog/ai-in-software-development-trends-statistics). Speed without review simply leads to more bugs, more quickly.
+
+  Prevent context drift with one simple rule: **one** feature per new chat. Long threads accumulate stale code, abandoned ideas, and conflicting instructions, and the AI will begin to unconsciously match patterns to the wrong information. Because your project architecture is already defined in AGENTS.md, a new chat session is essentially free. Simply paste in your agents file and the relevant code snippets, and you're back on track.
+
+  Git is not optional. AI tools will occasionally delete logic, rename things improperly, or subtly break functioning files. Commit before every significant prompt. If the agent messes up, git reset is your only reliable recourse.
+
+  Write your code for the next AI as well. Clean, well-commented code is not just for human collaborators; it's for the version of you that will revisit the file in six months and feed it to a fresh agent. The clearer your code, the faster the next session will be productive.
+
+  Also, if your AI agent fails on a task, **don't just try to fix it with another prompt.** You can also try to reset (use git), and prompt again, but this time in the section of the prompt where you tell your AI what not to do, add a new rule that makes sure it does not make that earlier mistake a second time.
+
+  Something that is often also overlooked are [agent skills](https://agentskills.io/home). **Skills** are bassically reusable prompts that you can use to quickly and consistently instruct your AI on how to perform common tasks. For example, you might have a "refactor" skill that tells the AI to look for duplicate code, or a "test" skill that instructs it to write unit tests. By using skills, you can save time and ensure consistency across your project, and at the same time, get better outputs. I recommend browsing skills [here](https//:skills.sh).
+
+  ### Some more general tips
+
+  Not everything I wanted to say really fits in the above sections, so here are some extra tips that are worth mentioning:
+
+  - While an AI is working, or you hit your rate limit, try understanding the project architecture, or reading the agent output.
+  - More expensive tools are not necesarrily better, they tend to be less modular, and in the current market, pricing and quality is very inconsistent and not predictable. There are also cheaper tools that almostmatch the expensive ones, so do your reseacrh when choosing a stack.
+  - You can use different AI agents, and using AGENTS.md makes the transition between them extra simple.
+  - Stay up to date with the latest trends and tools in AI-assisted development, as the field is rapidly evolving. New tools and techniques are emerging all the time, and staying informed will help you make the most of this technology.
+  - No tools that claim to be "fully autonomous" or be "able to one-shot entire projects" are actually that. AI has simply not arrived at this level yet. Sure, the app may function, but to what point, and what quality is it really?
+  - Always avoid over engineering (add this to your AGENTS.md). AI can easily lead you down the path of over engineering, and it will pollute your codebase, ultimately leading to more points of failure and lower quality outputs of future AI agents.
+  - Check out also smaller projects, not all innovation is done by the big players.
+  - For designing interfaces I suggest you use [DESIGN.md](https://getdesign.md/) for your design system.
+  - Also, check out [this website](https://free-for.dev/#/?id=apis-data-and-ml) for free services that you an use in your projects or during development.
+
+  ### Conclusion
+
+  AI-assisted development is all about maximizing speed and efficiency. However, speed without caution just simply causes damage. This acceleration is only valuable if you remain as careful as you would be hand-writing every line, and often, even more so.
+
+  AI is a powerful tool, but far from perfect. That is why AI will not be a replacement, but an assistant; **so treat it like one.**
+
+  ---
+
+  ## Sources
+
+  1. Stack Overflow Developer Survey 2024, AI section, https://survey.stackoverflow.co/2024/ai
+  2. Panto AI, "AI Coding Statistics, Adoption, Productivity & Market Metrics", https://www.getpanto.ai/blog/ai-coding-assistant-statistics
+  3. Modall, "AI in Software Development: 25+ Trends & Statistics (2026)", https://modall.ca/blog/ai-in-software-development-trends-statistics
