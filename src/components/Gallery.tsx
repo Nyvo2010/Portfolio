@@ -98,11 +98,10 @@ export default function Gallery({ onStackComplete, isReadyForOrbit, onProjectCli
     
     if (mode === "orbit") {
       const isMobile = window.innerWidth < 768;
-      // Wide ellipse: horizontal radius exceeds screen width (sides run off
-      // screen), vertical radius keeps the ring fully in view, centered.
-      const radiusX = window.innerWidth * (isMobile ? 0.95 : 0.42);
-      const radiusY = window.innerHeight * (isMobile ? 0.30 : 0.34);
-      const yOffset = 0;
+      const radiusX = window.innerWidth * (isMobile ? 0.80 : 0.42);
+      const radiusY = window.innerHeight * (isMobile ? 0.27 : 0.34);
+      // Lift ring + text above geometric center on mobile.
+      const yOffset = isMobile ? -window.innerHeight * 0.08 : 0;
       const duration = immediate ? 0 : 2.2;
       
       cardsRef.current.forEach((card, i) => {
@@ -154,44 +153,79 @@ export default function Gallery({ onStackComplete, isReadyForOrbit, onProjectCli
           updatePositions(scrollRotationRef.current, "orbit");
         };
 
-        // Touch: horizontal drag rotates the ellipse (no cursor on mobile).
-        // Touches may start ON a card — the ring is the target, not the card.
+        // Pointer Events: one code path for touch / pen / mouse.
+        // Vertical drag is what users try first — map BOTH axes to rotation.
+        let lastX: number | null = null;
+        let lastY: number | null = null;
+        let dragging = false;
+
+        const handlePointerDown = (e: PointerEvent) => {
+          if ((e.target as Element).closest("a, button")) return;
+          lastX = e.clientX;
+          lastY = e.clientY;
+          dragging = false;
+        };
+
+        const handlePointerMove = (e: PointerEvent) => {
+          if (lastX === null || lastY === null) return;
+          const dx = e.clientX - lastX;
+          const dy = e.clientY - lastY;
+          if (!dragging && Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
+          dragging = true;
+          // Horizontal AND vertical movement both spin the ellipse.
+          scrollRotationRef.current -= dx * 0.35 + dy * 0.25;
+          updatePositions(scrollRotationRef.current, "orbit");
+          lastX = e.clientX;
+          lastY = e.clientY;
+        };
+
+        const handlePointerUp = () => {
+          lastX = null;
+          lastY = null;
+          dragging = false;
+        };
+
+        window.addEventListener("wheel", handleWheel, { passive: true });
+        window.addEventListener("pointerdown", handlePointerDown);
+        window.addEventListener("pointermove", handlePointerMove);
+        window.addEventListener("pointerup", handlePointerUp);
+        window.addEventListener("pointercancel", handlePointerUp);
+
+        // Safety net: raw touch events for browsers where pointer capture
+        // on <img> children swallows pointermove during a pan.
         let touchX: number | null = null;
-        let touchY: number | null = null;
-        let rotating = false;
+        let touchRotating = false;
         const handleTouchStart = (e: TouchEvent) => {
           if (e.touches.length !== 1) return;
-          // Ignore gestures beginning on UI chrome (nav links etc.)
           if ((e.target as Element).closest("a, button")) return;
           touchX = e.touches[0].clientX;
-          touchY = e.touches[0].clientY;
-          rotating = false;
+          touchRotating = false;
         };
         const handleTouchMove = (e: TouchEvent) => {
-          if (touchX === null || touchY === null || e.touches.length !== 1) return;
+          if (touchX === null || e.touches.length !== 1) return;
           const dx = e.touches[0].clientX - touchX;
-          const dy = e.touches[0].clientY - touchY;
-          if (!rotating && Math.abs(dx) < 6) return;
-          if (!rotating && Math.abs(dy) >= Math.abs(dx)) return; // vertical scroll wins
-          rotating = true;
+          if (!touchRotating && Math.abs(dx) < 6) return;
+          // Vertical swipes rotate too — any drag direction spins the ring.
+          touchRotating = true;
           scrollRotationRef.current -= dx * 0.35;
           updatePositions(scrollRotationRef.current, "orbit");
           e.preventDefault();
           touchX = e.touches[0].clientX;
-          touchY = e.touches[0].clientY;
         };
         const handleTouchEnd = () => {
           touchX = null;
-          touchY = null;
-          rotating = false;
+          touchRotating = false;
         };
-
-        window.addEventListener("wheel", handleWheel, { passive: true });
         window.addEventListener("touchstart", handleTouchStart, { passive: true });
         window.addEventListener("touchmove", handleTouchMove, { passive: false });
         window.addEventListener("touchend", handleTouchEnd);
+
         return () => {
           window.removeEventListener("wheel", handleWheel);
+          window.removeEventListener("pointerdown", handlePointerDown);
+          window.removeEventListener("pointermove", handlePointerMove);
+          window.removeEventListener("pointerup", handlePointerUp);
+          window.removeEventListener("pointercancel", handlePointerUp);
           window.removeEventListener("touchstart", handleTouchStart);
           window.removeEventListener("touchmove", handleTouchMove);
           window.removeEventListener("touchend", handleTouchEnd);
@@ -205,7 +239,7 @@ export default function Gallery({ onStackComplete, isReadyForOrbit, onProjectCli
   return (
     <div
       className={`carousel-container ${viewMode === 'grid' ? 'overflow-y-auto bg-[#f7f7f5] z-[70] scroll-smooth' : 'overflow-hidden'}`}
-      style={viewMode === 'orbit' ? { touchAction: 'pan-y' } : undefined}
+      style={viewMode === 'orbit' ? { touchAction: 'none' } : undefined}
       ref={containerRef}
     >
       <div 
@@ -230,7 +264,7 @@ export default function Gallery({ onStackComplete, isReadyForOrbit, onProjectCli
             onMouseEnter={() => setHoveredIndex(i)}
             onMouseLeave={() => setHoveredIndex(null)}
           >
-            <img src={project.coverImage || ""} alt="" className="max-w-[210px] md:max-w-[320px] max-h-[300px] md:max-h-[380px] w-auto h-auto block" />
+            <img src={project.coverImage || ""} alt="" className="max-w-[230px] md:max-w-[320px] max-h-[320px] md:max-h-[380px] w-auto h-auto block" />
             {viewMode === "orbit" && (
               <div className={`absolute inset-0 bg-black/40 flex flex-col justify-end p-6 transition-opacity duration-300 ${hoveredIndex === i ? "opacity-100" : "opacity-0"}`}>
                 <div className="flex items-center justify-between text-white">
