@@ -98,11 +98,11 @@ export default function Gallery({ onStackComplete, isReadyForOrbit, onProjectCli
     
     if (mode === "orbit") {
       const isMobile = window.innerWidth < 768;
-      const radiusX = window.innerWidth * (isMobile ? 0.55 : 0.42);
-      const radiusY = window.innerHeight * (isMobile ? 0.38 : 0.34);
-      // Mobile: bigger ring, center sunk below the fold — only the top arc
-      // of the circle is on screen, front cards peek in from the bottom.
-      const yOffset = isMobile ? window.innerHeight * 0.42 : 0;
+      // Wide ellipse: horizontal radius exceeds screen width (sides run off
+      // screen), vertical radius keeps the ring fully in view, centered.
+      const radiusX = window.innerWidth * (isMobile ? 0.95 : 0.42);
+      const radiusY = window.innerHeight * (isMobile ? 0.30 : 0.34);
+      const yOffset = 0;
       const duration = immediate ? 0 : 2.2;
       
       cardsRef.current.forEach((card, i) => {
@@ -154,31 +154,36 @@ export default function Gallery({ onStackComplete, isReadyForOrbit, onProjectCli
           updatePositions(scrollRotationRef.current, "orbit");
         };
 
-        // Touch: horizontal drag rotates the carousel (no cursor on mobile).
+        // Touch: horizontal drag rotates the ellipse (no cursor on mobile).
+        // Touches may start ON a card — the ring is the target, not the card.
         let touchX: number | null = null;
         let touchY: number | null = null;
+        let rotating = false;
         const handleTouchStart = (e: TouchEvent) => {
           if (e.touches.length !== 1) return;
+          // Ignore gestures beginning on UI chrome (nav links etc.)
+          if ((e.target as Element).closest("a, button")) return;
           touchX = e.touches[0].clientX;
           touchY = e.touches[0].clientY;
+          rotating = false;
         };
         const handleTouchMove = (e: TouchEvent) => {
           if (touchX === null || touchY === null || e.touches.length !== 1) return;
-          if ((e.target as Element).closest(".pointer-events-auto")) return;
           const dx = e.touches[0].clientX - touchX;
           const dy = e.touches[0].clientY - touchY;
-          // Horizontal intent wins; vertical swipes stay free for page scroll.
-          if (Math.abs(dx) > Math.abs(dy)) {
-            scrollRotationRef.current -= dx * 0.25;
-            updatePositions(scrollRotationRef.current, "orbit");
-            e.preventDefault();
-            touchX = e.touches[0].clientX;
-            touchY = e.touches[0].clientY;
-          }
+          if (!rotating && Math.abs(dx) < 6) return;
+          if (!rotating && Math.abs(dy) >= Math.abs(dx)) return; // vertical scroll wins
+          rotating = true;
+          scrollRotationRef.current -= dx * 0.35;
+          updatePositions(scrollRotationRef.current, "orbit");
+          e.preventDefault();
+          touchX = e.touches[0].clientX;
+          touchY = e.touches[0].clientY;
         };
         const handleTouchEnd = () => {
           touchX = null;
           touchY = null;
+          rotating = false;
         };
 
         window.addEventListener("wheel", handleWheel, { passive: true });
@@ -198,7 +203,11 @@ export default function Gallery({ onStackComplete, isReadyForOrbit, onProjectCli
   const selectedProject = selectedProjectSlug ? PROJECTS.find(p => slugify(p.title) === selectedProjectSlug) : null;
 
   return (
-    <div className={`carousel-container ${viewMode === 'grid' ? 'overflow-y-auto bg-[#f7f7f5] z-[70] scroll-smooth' : 'overflow-hidden'}`} ref={containerRef}>
+    <div
+      className={`carousel-container ${viewMode === 'grid' ? 'overflow-y-auto bg-[#f7f7f5] z-[70] scroll-smooth' : 'overflow-hidden'}`}
+      style={viewMode === 'orbit' ? { touchAction: 'pan-y' } : undefined}
+      ref={containerRef}
+    >
       <div 
         className={`carousel-items relative ${viewMode === 'grid' ? 'flex flex-col items-center w-full' : 'h-screen'}`} 
         ref={itemsRef}

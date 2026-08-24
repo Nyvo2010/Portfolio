@@ -7,7 +7,7 @@ import { motion } from "motion/react";
 
 export default function Overlay() {
   return (
-    <div className="fixed inset-0 z-[450] pointer-events-none p-8 flex flex-col justify-center items-center max-md:justify-start max-md:pt-[30vh] md:pb-0">
+    <div className="fixed inset-0 z-[450] pointer-events-none p-8 flex flex-col justify-center items-center md:pb-0">
       <motion.div 
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
