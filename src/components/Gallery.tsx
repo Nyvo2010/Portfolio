@@ -100,8 +100,8 @@ export default function Gallery({ onStackComplete, isReadyForOrbit, onProjectCli
       const isMobile = window.innerWidth < 768;
       const radiusX = window.innerWidth * (isMobile ? 0.80 : 0.42);
       const radiusY = window.innerHeight * (isMobile ? 0.27 : 0.34);
-      // Lift ring + text above geometric center on mobile.
-      const yOffset = isMobile ? -window.innerHeight * 0.08 : 0;
+      // Lift the RING above center on mobile; text stays put.
+      const yOffset = isMobile ? -window.innerHeight * 0.14 : 0;
       const duration = immediate ? 0 : 2.2;
       
       cardsRef.current.forEach((card, i) => {
@@ -154,7 +154,7 @@ export default function Gallery({ onStackComplete, isReadyForOrbit, onProjectCli
         };
 
         // Pointer Events: one code path for touch / pen / mouse.
-        // Vertical drag is what users try first — map BOTH axes to rotation.
+        // VERTICAL drag is the primary control (matches mobile scroll intent).
         let lastX: number | null = null;
         let lastY: number | null = null;
         let dragging = false;
@@ -172,8 +172,8 @@ export default function Gallery({ onStackComplete, isReadyForOrbit, onProjectCli
           const dy = e.clientY - lastY;
           if (!dragging && Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
           dragging = true;
-          // Horizontal AND vertical movement both spin the ellipse.
-          scrollRotationRef.current -= dx * 0.35 + dy * 0.25;
+          // Vertical dominates; horizontal adds a little.
+          scrollRotationRef.current -= dy * 0.45 + dx * 0.1;
           updatePositions(scrollRotationRef.current, "orbit");
           lastX = e.clientX;
           lastY = e.clientY;
@@ -191,29 +191,27 @@ export default function Gallery({ onStackComplete, isReadyForOrbit, onProjectCli
         window.addEventListener("pointerup", handlePointerUp);
         window.addEventListener("pointercancel", handlePointerUp);
 
-        // Safety net: raw touch events for browsers where pointer capture
-        // on <img> children swallows pointermove during a pan.
-        let touchX: number | null = null;
+        // Safety net: raw touch events, vertical-dominant rotation.
+        let lastTouchY: number | null = null;
         let touchRotating = false;
         const handleTouchStart = (e: TouchEvent) => {
           if (e.touches.length !== 1) return;
           if ((e.target as Element).closest("a, button")) return;
-          touchX = e.touches[0].clientX;
+          lastTouchY = e.touches[0].clientY;
           touchRotating = false;
         };
         const handleTouchMove = (e: TouchEvent) => {
-          if (touchX === null || e.touches.length !== 1) return;
-          const dx = e.touches[0].clientX - touchX;
-          if (!touchRotating && Math.abs(dx) < 6) return;
-          // Vertical swipes rotate too — any drag direction spins the ring.
+          if (lastTouchY === null || e.touches.length !== 1) return;
+          const dy = e.touches[0].clientY - lastTouchY;
+          if (!touchRotating && Math.abs(dy) < 3) return;
           touchRotating = true;
-          scrollRotationRef.current -= dx * 0.35;
+          scrollRotationRef.current -= dy * 0.45;
           updatePositions(scrollRotationRef.current, "orbit");
           e.preventDefault();
-          touchX = e.touches[0].clientX;
+          lastTouchY = e.touches[0].clientY;
         };
         const handleTouchEnd = () => {
-          touchX = null;
+          lastTouchY = null;
           touchRotating = false;
         };
         window.addEventListener("touchstart", handleTouchStart, { passive: true });
