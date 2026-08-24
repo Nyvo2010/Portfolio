@@ -98,11 +98,11 @@ export default function Gallery({ onStackComplete, isReadyForOrbit, onProjectCli
     
     if (mode === "orbit") {
       const isMobile = window.innerWidth < 768;
-      const radiusX = window.innerWidth * (isMobile ? 0.44 : 0.42);
-      const radiusY = window.innerHeight * (isMobile ? 0.30 : 0.34);
-      // Mobile: sink the ring so only its top arc is visible in the
-      // lower part of the viewport (circle center sits below the fold).
-      const yOffset = isMobile ? window.innerHeight * 0.38 : 0;
+      const radiusX = window.innerWidth * (isMobile ? 0.55 : 0.42);
+      const radiusY = window.innerHeight * (isMobile ? 0.38 : 0.34);
+      // Mobile: bigger ring, center sunk below the fold — only the top arc
+      // of the circle is on screen, front cards peek in from the bottom.
+      const yOffset = isMobile ? window.innerHeight * 0.88 : 0;
       const duration = immediate ? 0 : 2.2;
       
       cardsRef.current.forEach((card, i) => {
@@ -112,7 +112,7 @@ export default function Gallery({ onStackComplete, isReadyForOrbit, onProjectCli
         const x = Math.sin(currentAngle) * radiusX;
         const y = Math.cos(currentAngle) * radiusY + yOffset;
         
-        const scale = 0.6 + (Math.cos(currentAngle) + 1) * 0.15; 
+        const scale = 0.65 + (Math.cos(currentAngle) + 1) * 0.17; 
 
         gsap.to(card, {
           x: x,
@@ -221,7 +221,7 @@ export default function Gallery({ onStackComplete, isReadyForOrbit, onProjectCli
             onMouseEnter={() => setHoveredIndex(i)}
             onMouseLeave={() => setHoveredIndex(null)}
           >
-            <img src={project.coverImage || ""} alt="" className="max-w-[160px] md:max-w-[320px] max-h-[240px] md:max-h-[380px] w-auto h-auto block" />
+            <img src={project.coverImage || ""} alt="" className="max-w-[210px] md:max-w-[320px] max-h-[300px] md:max-h-[380px] w-auto h-auto block" />
             {viewMode === "orbit" && (
               <div className={`absolute inset-0 bg-black/40 flex flex-col justify-end p-6 transition-opacity duration-300 ${hoveredIndex === i ? "opacity-100" : "opacity-0"}`}>
                 <div className="flex items-center justify-between text-white">
