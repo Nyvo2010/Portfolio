@@ -102,7 +102,7 @@ export default function Gallery({ onStackComplete, isReadyForOrbit, onProjectCli
       const radiusY = window.innerHeight * (isMobile ? 0.38 : 0.34);
       // Mobile: bigger ring, center sunk below the fold — only the top arc
       // of the circle is on screen, front cards peek in from the bottom.
-      const yOffset = isMobile ? window.innerHeight * 0.62 : 0;
+      const yOffset = isMobile ? window.innerHeight * 0.42 : 0;
       const duration = immediate ? 0 : 2.2;
       
       cardsRef.current.forEach((card, i) => {
