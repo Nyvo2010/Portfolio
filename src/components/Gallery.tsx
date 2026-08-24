@@ -99,8 +99,10 @@ export default function Gallery({ onStackComplete, isReadyForOrbit, onProjectCli
     if (mode === "orbit") {
       const isMobile = window.innerWidth < 768;
       const radiusX = window.innerWidth * (isMobile ? 0.44 : 0.42);
-      const radiusY = window.innerHeight * (isMobile ? 0.32 : 0.34);
-      const yOffset = isMobile ? -60 : 0;
+      const radiusY = window.innerHeight * (isMobile ? 0.30 : 0.34);
+      // Mobile: sink the ring so only its top arc is visible in the
+      // lower part of the viewport (circle center sits below the fold).
+      const yOffset = isMobile ? window.innerHeight * 0.38 : 0;
       const duration = immediate ? 0 : 2.2;
       
       cardsRef.current.forEach((card, i) => {
@@ -152,9 +154,42 @@ export default function Gallery({ onStackComplete, isReadyForOrbit, onProjectCli
           updatePositions(scrollRotationRef.current, "orbit");
         };
 
+        // Touch: horizontal drag rotates the carousel (no cursor on mobile).
+        let touchX: number | null = null;
+        let touchY: number | null = null;
+        const handleTouchStart = (e: TouchEvent) => {
+          if (e.touches.length !== 1) return;
+          touchX = e.touches[0].clientX;
+          touchY = e.touches[0].clientY;
+        };
+        const handleTouchMove = (e: TouchEvent) => {
+          if (touchX === null || touchY === null || e.touches.length !== 1) return;
+          if ((e.target as Element).closest(".pointer-events-auto")) return;
+          const dx = e.touches[0].clientX - touchX;
+          const dy = e.touches[0].clientY - touchY;
+          // Horizontal intent wins; vertical swipes stay free for page scroll.
+          if (Math.abs(dx) > Math.abs(dy)) {
+            scrollRotationRef.current -= dx * 0.25;
+            updatePositions(scrollRotationRef.current, "orbit");
+            e.preventDefault();
+            touchX = e.touches[0].clientX;
+            touchY = e.touches[0].clientY;
+          }
+        };
+        const handleTouchEnd = () => {
+          touchX = null;
+          touchY = null;
+        };
+
         window.addEventListener("wheel", handleWheel, { passive: true });
+        window.addEventListener("touchstart", handleTouchStart, { passive: true });
+        window.addEventListener("touchmove", handleTouchMove, { passive: false });
+        window.addEventListener("touchend", handleTouchEnd);
         return () => {
           window.removeEventListener("wheel", handleWheel);
+          window.removeEventListener("touchstart", handleTouchStart);
+          window.removeEventListener("touchmove", handleTouchMove);
+          window.removeEventListener("touchend", handleTouchEnd);
         };
       }
     }
