@@ -1,0 +1,89 @@
+import { useEffect, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import Header from "../components/Header";
+import { writings, writingSlug, type Writing } from "../content/content";
+import Contact from "./Contact";
+import { assetUrl } from "../utils/urls";
+import { waitForCritical } from "../utils/ready";
+
+export default function WritingPage({ writing }: { writing: Writing }) {
+  const [ready, setReady] = useState(false);
+
+  // No loading screen here — the page simply fades in once the display
+  // face + hero image are decoded, so there is never a weight flash or
+  // image pop. Cached visits resolve in milliseconds.
+  useEffect(() => {
+    let on = true;
+    void Promise.allSettled(
+      waitForCritical(writing.imageSource ? [writing.imageSource] : [])
+    ).then(() => {
+      if (on) setReady(true);
+    });
+    return () => {
+      on = false;
+    };
+  }, [writing]);
+
+  return (
+    <div
+      className={`min-h-[100dvh] bg-white text-black transition-opacity duration-300 ${
+        ready ? "app-ready opacity-100" : "opacity-0"
+      }`}
+    >
+      <Header />
+      <main className="px-6 pt-[22vh] pb-12 sm:px-10 md:px-16">
+        <header className="mx-auto flex min-h-[38vh] max-w-4xl flex-col items-center justify-center text-center">
+          <h1 className="writing-title t-heading text-balance">{writing.title}</h1>
+          <p className="t-body mt-5 opacity-40">{writing.date}</p>
+        </header>
+
+        {writing.imageSource && (
+          <img
+            className="mx-auto my-10 block h-auto w-full max-w-2xl"
+            src={writing.imageSource}
+            alt=""
+            loading="eager"
+            decoding="async"
+          />
+        )}
+
+        <article className="writing-body mx-auto max-w-2xl">
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={{
+              h1: ({ children }) => <h2 className="t-heading mb-8 mt-20 text-balance">{children}</h2>,
+              h2: ({ children }) => <h2 className="t-heading mb-8 mt-20 text-balance">{children}</h2>,
+              h3: ({ children }) => <h3 className="t-post mb-5 mt-14">{children}</h3>,
+              p: ({ children }) => <p className="t-body mb-7 max-w-2xl opacity-70">{children}</p>,
+              ul: ({ children }) => <ul className="t-body mb-8 list-disc space-y-2 pl-6 opacity-70">{children}</ul>,
+              ol: ({ children }) => <ol className="t-body mb-8 list-decimal space-y-2 pl-6 opacity-70">{children}</ol>,
+              li: ({ children }) => <li>{children}</li>,
+              blockquote: ({ children }) => <blockquote className="t-body mb-8 border-l border-black/20 pl-5 italic opacity-70">{children}</blockquote>,
+              hr: () => <hr className="my-12 border-black/10" />,
+              a: ({ href, children }) => (
+                <a className="underline decoration-black/20 transition-opacity hover:opacity-50" href={href} target="_blank" rel="noreferrer">
+                  {children}
+                </a>
+              ),
+              img: ({ src, alt }) => (
+                <img className="my-10 block h-auto w-full object-contain" src={src ? assetUrl(src) : undefined} alt={alt ?? ""} loading="lazy" decoding="async" />
+              ),
+              code: ({ children }) => <code className="rounded bg-black/5 px-1 py-0.5">{children}</code>,
+              // Fenced blocks keep their whitespace + scroll sideways instead
+              // of wrapping (inline `code` above stays for backtick spans).
+              pre: ({ children }) => <pre className="t-body mb-8 overflow-x-auto rounded bg-black/5 p-4">{children}</pre>,
+            }}
+          >
+            {writing.body}
+          </ReactMarkdown>
+        </article>
+      </main>
+      <Contact />
+    </div>
+  );
+}
+
+export function findWriting(slug: string) {
+  return writings.find((writing) => writingSlug(writing) === slug) ?? null;
+}

@@ -1,260 +1,136 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
-import { useState, useEffect, useCallback, useRef } from "react";
-import Gallery from "./components/Gallery";
-import Overlay from "./components/Overlay";
-import LoadingScreen from "./components/LoadingScreen";
-import Navigation from "./components/Navigation";
-import Lab from "./components/Lab";
-import Blog from "./components/Blog";
-import ChatWidget from "./components/ChatWidget";
-import NotFound from "./components/NotFound";
-import { AnimatePresence, motion } from "motion/react";
-
-interface RouteState {
-  page: string;
-  projectSlug?: string;
-  blogSlug?: string;
-}
-
-function parseSegments(segments: string[]): RouteState {
-  if (segments.length === 0 || (segments.length === 1 && segments[0] === "")) {
-    return { page: "home" };
-  }
-
-  if (segments[0] === "projects" || segments[0] === "project") {
-    if (segments.length >= 2 && segments[1]) {
-      return { page: "project", projectSlug: segments[1] };
-    }
-    return { page: "home" };
-  }
-
-  if (segments[0] === "blog") {
-    if (segments.length >= 2 && segments[1]) {
-      return { page: "blog_post", blogSlug: segments[1] };
-    }
-    return { page: "blog" };
-  }
-
-  if (segments[0] === "lab") {
-    return { page: "lab" };
-  }
-
-  if (segments[0] === "about") {
-    return { page: "home" };
-  }
-
-  return { page: "404" };
-}
-
-function parseUrl(): RouteState {
-  const redirectPath = sessionStorage.getItem('spa_redirect');
-  if (redirectPath) {
-    sessionStorage.removeItem('spa_redirect');
-    const segments = redirectPath.split("/").filter(Boolean);
-    return parseSegments(segments);
-  }
-
-  const path = window.location.pathname;
-  const segments = path.split("/").filter(Boolean);
-  return parseSegments(segments);
-}
-
-function navigate(path: string) {
-  window.history.pushState({}, "", path);
-  window.dispatchEvent(new PopStateEvent("popstate"));
-}
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import ErrorBoundary from "./components/ErrorBoundary";
+import Header from "./components/Header";
+import GradualBlur from "./components/GradualBlur";
+import Loader from "./components/Loader";
+import { assetUrl, routePath } from "./utils/urls";
+import { waitForCritical } from "./utils/ready";
+import { scrollToInitialHash } from "./utils/navigation";
+import { projects } from "./content/content";
+// Load the heavy WebGL chunk while the loader is visible, then mount it only
+// after the rest of the page is ready.
+const loadBlobScene = () => import("./components/ui/r3f-blob");
+const BlobScene = lazy(loadBlobScene);
+// Grace before the loader appears — cached visits settle faster than this
+// and reveal with no loader flash at all.
+const LOADER_GRACE_MS = 250;
+import Hero from "./sections/Hero";
+import About from "./sections/About";
+import SelectedWorks from "./sections/SelectedWorks";
+import Writings from "./sections/Writings";
+import Contact from "./sections/Contact";
+import NotFound from "./sections/NotFound";
+import WritingPage, { findWriting } from "./sections/WritingPage";
+import { ProjectOverlay, type Origin, type Project } from "./sections/ProjectsGlobe";
 
 export default function App() {
-  const initialRoute = parseUrl();
-  const hasLoadedRef = useRef(false);
-  const [progress, setProgress] = useState(0);
-  const [isLoadingVisible, setIsLoadingVisible] = useState(() => {
-    // Show loading screen only for initial first-load on home page
-    if (hasLoadedRef.current) return false;
-    hasLoadedRef.current = true;
-    return initialRoute.page === "home";
-  });
-  const [isStackComplete, setIsStackComplete] = useState(false);
-  const [isReadyForOrbit, setIsReadyForOrbit] = useState(false);
-  const [route, setRoute] = useState<RouteState>(initialRoute);
-  const [selectedProjectSlug, setSelectedProjectSlug] = useState<string | null>(null);
+  const [active, setActive] = useState<{ p: Project; origin: Origin } | null>(null);
+  const [ready, setReady] = useState(false);
+  const [loaderGone, setLoaderGone] = useState(false);
+  const [showLoader, setShowLoader] = useState(false);
+  const showedLoaderRef = useRef(false);
 
-  const galleryMode = route.page === "project" ? "grid" : "orbit";
+  const path = routePath(window.location.pathname).replace(/\/+$/, "") || "/";
+  const isHome = path === "/" || path === "/index.html";
+  const writing = !isHome && path.startsWith("/writings/")
+    ? findWriting(path.slice("/writings/".length))
+    : null;
 
+  const resources = useMemo(() => {
+    if (!isHome) return [];
+    // Fonts (every weight the CSS uses) + fully decoded images — the
+    // loader holds until ALL of these settle, so reveal never flashes
+    // fallback weights or half-decoded bitmaps.
+    const imageSources = [assetUrl("/PFP.png"), ...projects.map((project) => project.imageSource)];
+    return [loadBlobScene(), ...waitForCritical(imageSources)];
+  }, [isHome]);
+
+  // Only show the loader when there is actually something to wait for:
+  // on a cached visit fonts/images/chunk settle before the grace timer
+  // fires, and the page reveals instantly with no loader flash.
   useEffect(() => {
-    const handlePopState = () => {
-      setRoute(parseUrl());
+    if (!isHome) return;
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      if (!cancelled) {
+        showedLoaderRef.current = true;
+        setShowLoader(true);
+      }
+    }, LOADER_GRACE_MS);
+    void Promise.allSettled(resources).then(() => {
+      if (cancelled) return;
+      window.clearTimeout(timer);
+      if (!showedLoaderRef.current) {
+        setReady(true);
+        setLoaderGone(true);
+      }
+    });
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
     };
-    window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
-  }, []);
+  }, [isHome, resources]);
 
-  const activePage = route.page;
-
-  useEffect(() => {
-    if (route.page === "project" && route.projectSlug) {
-      setSelectedProjectSlug(route.projectSlug);
-    } else if (route.page === "home") {
-      setSelectedProjectSlug(null);
-    }
-  }, [route.page, route.projectSlug]);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          return 100;
-        }
-        const nextProgress = prev + Math.random() * 8;
-        return nextProgress >= 100 ? 100 : nextProgress;
-      });
-    }, 100);
-    return () => clearInterval(interval);
-  }, []);
-
-  const handleStackComplete = useCallback(() => {
-    if (progress >= 100) {
-      setIsStackComplete(true);
-    }
-  }, [progress]);
-
-  useEffect(() => {
-    if (isStackComplete) {
-      setIsLoadingVisible(false);
-    }
-  }, [isStackComplete]);
-
-  useEffect(() => {
-    if (!isLoadingVisible && isStackComplete) {
-      const timer = setTimeout(() => {
-        setIsReadyForOrbit(true);
-      }, 1500);
-      return () => clearTimeout(timer);
-    }
-  }, [isLoadingVisible, isStackComplete]);
-
-  const handlePageChange = (page: string) => {
-    let path = "/";
-    if (page === "blog") path = "/blog";
-    else if (page === "lab") path = "/lab";
-    else if (page === "home") path = "/";
-    navigate(path);
-    setRoute(parseUrl());
-    if (page === "home") {
-      setSelectedProjectSlug(null);
-    }
+  const handleLoaded = () => {
+    setReady(true);
+    window.setTimeout(() => setLoaderGone(true), 200);
   };
 
-  const handleProjectClick = (slug: string) => {
-    setRoute({ page: "project", projectSlug: slug });
-    setSelectedProjectSlug(slug);
-    navigate(`/projects/${slug}`);
-  };
+  // Deep links from blog-post header pills (e.g. /#writings) land here
+  // with a hash — scroll to the right act once the page is ready.
+  useEffect(() => {
+    if (isHome && ready) scrollToInitialHash();
+  }, [isHome, ready]);
 
-  const handleBlogPostClick = (slug: string) => {
-    setRoute({ page: "blog_post", blogSlug: slug });
-    navigate(`/blog/${slug}`);
-  };
-
-  const showProjectView = route.page === "home" || route.page === "project";
+  if (!isHome) {
+    return writing ? <WritingPage writing={writing} /> : <NotFound />;
+  }
 
   return (
-    <div className="relative w-full h-screen overflow-hidden bg-[#f7f7f5]">
-      {route.page === "home" && <LoadingScreen isVisible={isLoadingVisible} progress={progress} />}
-      
-      {/* Background/Main Content */}
-      <AnimatePresence mode="wait">
-        {showProjectView && (
-          <motion.div
-            key={route.page}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
-            className={`absolute inset-0 flex items-center justify-center ${(!isReadyForOrbit && progress >= 100) ? "z-[3000]" : "z-0"} ${isLoadingVisible ? "pointer-events-none" : ""}`}
-          >
-            <Gallery 
-              onStackComplete={handleStackComplete} 
-              isReadyForOrbit={isReadyForOrbit}
-              onProjectClick={handleProjectClick}
-              viewMode={galleryMode}
-              startStack={progress >= 100}
-              selectedProjectSlug={selectedProjectSlug}
-              onPageChange={handlePageChange}
-            />
-            {route.page === "home" && isReadyForOrbit && <Overlay />}
-          </motion.div>
-        )}
-
-        {route.page === "lab" && (
-          <motion.div
-            key="lab"
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.02 }}
-            transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
-            className="absolute inset-0 z-20"
-          >
-            <Lab />
-          </motion.div>
-        )}
-
-        {(route.page === "blog" || route.page === "blog_post") && (
-          <motion.div
-            key="blog"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
-            className="absolute inset-0 z-20"
-          >
-            <Blog 
-              onPageChange={handlePageChange} 
-              activePage={route.page}
-              onPostClick={handleBlogPostClick}
-              selectedSlug={route.blogSlug}
-            />
-          </motion.div>
-        )}
-
-        {route.page === "404" && (
-          <motion.div
-            key="404"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.4 }}
-            className="absolute inset-0 z-50"
-          >
-            <NotFound onBack={() => handlePageChange("home")} />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {!isLoadingVisible && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.4 }}
-            className="pointer-events-none fixed inset-0 z-[1000]"
-          >
-            <Navigation activePage={activePage} onPageChange={handlePageChange} />
-            <ChatWidget onPageChange={handlePageChange} />
-          </motion.div>
-        )}
-      </AnimatePresence>
+    <div className={`text-black min-h-[100dvh] ${ready ? "app-ready" : ""}`}>
+      {showLoader && !loaderGone && <Loader onDone={handleLoaded} resources={resources} />}
+      <Header />
+      <GradualBlur
+        target="page"
+        position="top"
+        height="4rem"
+        strength={1}
+        divCount={6}
+        curve="bezier"
+        className="page-edge-blur"
+      />
+      <GradualBlur
+        target="page"
+        position="bottom"
+        height="5rem"
+        strength={1}
+        divCount={6}
+        curve="bezier"
+        className="page-edge-blur"
+      />
+      <div className="pointer-events-none fixed inset-0 z-30 flex items-center justify-center">
+        <div className="blob-enter blob-wrap h-[64vmin] w-[64vmin] max-h-[520px] max-w-[520px] md:h-[52vmin] md:w-[52vmin]">
+          {ready && (
+            <Suspense fallback={null}>
+              <ErrorBoundary>
+                <BlobScene />
+              </ErrorBoundary>
+            </Suspense>
+          )}
+        </div>
+      </div>
+      <main className="relative">
+        <Hero />
+        <About />
+        <SelectedWorks onSelect={(p, origin) => setActive({ p, origin })} />
+        <Writings />
+        <Contact />
+      </main>
+      <ProjectOverlay
+        project={active?.p ?? null}
+        origin={active?.origin ?? null}
+        onClose={() => setActive(null)}
+      />
     </div>
   );
 }
-

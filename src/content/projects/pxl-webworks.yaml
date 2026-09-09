@@ -1,17 +1,3 @@
 title: "PXL Webworks"
-date: "2026-04-30"
-coverImage: "/assets/projects/PXL-Hero.png"
-tags: ["Web Design", "Development"]
-summary: "High performance web applications for modern brands."
-content: |-
-
-  ![img1](/assets/projects/PXL-Hero.png)
-  ![img2](/assets/projects/PXL-Works.png)
-  ![img3](/assets/projects/PXL-About.png)
-  ![img4](/assets/projects/PXL-CTA.png)
-  ![img5](/assets/projects/PXL-Logo.png)
-
-  ### Building PXL Webworks
-  Starting a small business with a friend, PXL Webworks is our outlet for creating immersive websites. The website itself is a testament to our approach—immersive, heavy on animations, and focused on guiding the user's attention. We believe that a website should be more than just content; it should be an experience.
-
-  A lot of tiny details, that might not be seen at first sight by the user, are what actually make the experience clear and intuitive.
+imageSource: "/assets/projects/PXL-Hero.png"
+description: "An immersive web design studio website where animation and detail guide attention through every page."

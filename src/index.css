@@ -1,99 +1,256 @@
-@import url('https://api.fontshare.com/v2/css?f[]=satoshi@900,700,500,300,400&display=swap');
 @import "tailwindcss";
-
-@theme {
-  --font-sans: "Satoshi", ui-sans-serif, system-ui, sans-serif;
+/* Erode — display face for headings only.
+   `block` keeps fallback text invisible for a beat instead of flashing a
+   wrong (heavy) weight and then snapping — the loader covers this window. */
+@font-face {
+  font-family: "Erode";
+  src: url("./assets/fonts/Erode-Variable.ttf") format("truetype-variations");
+  font-weight: 100 700;
+  font-style: normal;
+  font-display: block;
+}
+@font-face {
+  font-family: "Erode";
+  src: url("./assets/fonts/Erode-VariableItalic.ttf") format("truetype-variations");
+  font-weight: 100 700;
+  font-style: italic;
+  font-display: block;
 }
 
 :root {
-  --color-primary: #111111;
-  --color-secondary: #ffffff;
-  --color-bg: #f7f7f5;
-  --card-width: 280px;
-  --card-height: 380px;
-  --card-border-radius: 4px;
+  --font-sans: "Helvetica Neue", helvetica, arial, sans-serif;
+  --font-display: "Erode", "Georgia", serif;
+  /* single motion language — every timed entrance shares this curve;
+     scrubbed scroll acts keep their own GSAP ease (WORK_EASE) since
+     scrub progress is driven, not timed. */
+  --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
+  --blur-standard: 12px;
 }
 
-@media screen and (max-height: 1000px) {
-  :root {
-    --card-width: 200px;
-    --card-height: 280px;
-  }
-}
-
-*, *::after, *::before {
-  box-sizing: border-box;
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 1rem;
+  scrollbar-gutter: stable;
 }
 
 body {
+  /* Keep programmatic page movement gentle without replacing native scrolling. */
+  scroll-behavior: smooth;
   font-family: var(--font-sans);
-  color: var(--color-primary);
-  background-color: var(--color-bg);
-  width: 100%;
-  height: 100vh;
-  overflow: hidden;
+  background: #fff;
+  color: #000;
+  -webkit-font-smoothing: antialiased;
+  /* keep body text exactly as declared on every device — iOS/Android
+     never get to inflate or shrink it for "readability" */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
-.carousel-container {
-  width: 100vw;
-  height: 100vh;
-  position: fixed;
-  left: 0;
-  top: 0;
-  user-select: none;
-  z-index: 10;
+/* type scale — exactly two sizes.
+   headings → Erode. body + all buttons → Helvetica.
+   font-synthesis off: a synthesized faux-bold fallback is what flashed
+   as "highest weight" before the variable axis arrived. */
+.t-heading {
+  font-family: var(--font-display);
+  font-weight: 350;
+  font-variation-settings: "wght" 350;
+  font-synthesis: none;
+  font-size: clamp(2.6rem, 7.5vw, 7.5rem);
+  line-height: 1.02;
+  letter-spacing: -0.015em;
+}
+.t-body {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.6;
+  letter-spacing: 0;
+}
+/* writing page titles wrap at word boundaries while staying centered. */
+.writing-title {
+  width: 100%;
+  max-width: 42rem;
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 
-.carousel-items {
-  width: 100%;
+/* writings index titles — same Erode face, small */
+.t-post {
+  font-family: var(--font-display);
+  font-weight: 350;
+  font-variation-settings: "wght" 350;
+  font-synthesis: none;
+  font-size: clamp(1.15rem, 2.4vw, 2.4rem);
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+
+.sw-word {
+  /* normalize each word's line box so both words measure identically:
+     same 1em box for both, baselines aligned via inline-block
+     vertical-align — no flex cross-axis involved. */
+  display: inline-block;
+  line-height: 1;
+  vertical-align: baseline;
+  /* scrubbed x/y transforms — promote so the split never subpixel-jitters */
+  will-change: transform;
+}
+.sw-rise {
+  will-change: transform, opacity;
+}
+
+/* selected-works idle drift — the whole thumb frame floats gently in
+   place (wrapper only, so nothing crops and no edges show). the
+   scrolltrigger reveal runs on the inner button, the overlay measures
+   the live rect, so the few px of offset travel along exactly. */
+@keyframes sw-drift {
+  0%, 100% { transform: translate3d(-5px, -8px, 0); }
+  50% { transform: translate3d(5px, 8px, 0); }
+}
+.sw-drift {
+  animation: sw-drift 7s ease-in-out infinite;
   will-change: transform;
 }
 
-.carousel-item {
-  position: absolute;
-  transform: translate(-50%, -50%);
-  transform-origin: center center;
-  user-select: none;
-  cursor: pointer;
+/* works image net — the reveal (blur + fade + rise) is driven entirely by
+   the scrubbed GSAP tween, so it plays identically on every pass down and
+   reverses on the way back up. the thumbs are small (≤160px) which keeps
+   the per-frame blur cheap; will-change promotes the layers. */
+.sw-img {
+  will-change: transform, opacity, filter;
+}
+.blob-lane { width: 100%; }
+@media (min-width: 768px) {
+  .blob-lane { width: 34vmin; min-width: 280px; }
 }
 
-/* Markdown Support */
-.markdown-body h3 {
-  font-size: 1.5rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: -0.05em;
-  margin-top: 2rem;
-  margin-bottom: 1rem;
-  color: #111;
+/* page edge blurs — fixed GradualBlur layers sit above page content
+   (z 20) but below blob / header / overlay, so the header and
+   preview are never affected (!important beats inline style) */
+.page-edge-blur { z-index: 20 !important; }
+/* fixed backdrop-filter strips are the priciest per-frame work on a
+   phone — drop them entirely below the mobile breakpoint; the top and
+   bottom edge haze is barely perceptible at phone sizes anyway */
+@media (max-width: 767px) {
+  .page-edge-blur { display: none; }
 }
 
-.markdown-body p {
-  margin-bottom: 1.5rem;
-  opacity: 0.8;
+/* page-switch veil — fast exit fade over full navigations (same 200ms +
+   standard curve everywhere; entry fades live on each page). */
+.page-exit-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s var(--ease-standard);
+}
+.page-exit-veil.on { opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .page-exit-veil { transition: none; }
 }
 
-.markdown-body ul {
-  list-style-type: disc;
-  margin-left: 1.5rem;
-  margin-bottom: 1.5rem;
+/* header logo — “N.” in the body face, semibold */
+.header-logo {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 18px;
+  line-height: 1;
+  letter-spacing: -0.01em;
 }
 
-.markdown-body li {
-  margin-bottom: 0.5rem;
+/* header pills — compact, centered text. on hover the arrow slides in
+   beside the label and the pair stays centered together. */
+.pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-variation-settings: "wght" 500;
+  font-synthesis: none;
+  font-size: 16px;
+  line-height: 1;
+  letter-spacing: 0;
+  background: #ececec;
+  color: #000;
+  border-radius: 4px;
+  padding: 0.375rem 0.75rem;
+  transition: background-color 0.25s ease, color 0.25s ease;
+  white-space: nowrap;
+}
+.pill:hover, .pill[data-open="true"] {
+  background: #000;
+  color: #fff;
+}
+.pill .pill-arrow {
+  flex: none;
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  margin-left: 0;
+  transition: max-width 0.3s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease, margin-left 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.pill:hover .pill-arrow, .pill[data-open="true"] .pill-arrow {
+  max-width: 14px;
+  opacity: 1;
+  margin-left: 0.35rem;
+}
+.pill:active { transform: scaleX(0.98); }
+
+/* header entrance on page load */
+@keyframes header-drop {
+  from { opacity: 0; transform: translateY(-12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.header-enter { opacity: 0; }
+.app-ready .header-enter {
+  animation: header-drop 0.7s var(--ease-standard) both;
 }
 
-.card__number {
-  position: absolute;
-  top: 20px;
-  left: 20px;
-  font-size: 10px;
-  color: #111;
-  background: #fff;
-  padding: 4px 10px;
-  border-radius: 20px;
-  z-index: 10;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+/* blob mount — plain fade held until the loader finishes;
+   the scale + spin entrance happens in 3D.
+   the fixed blob layer never intercepts clicks. */
+@keyframes blob-in { from { opacity: 0; } to { opacity: 1; } }
+.blob-enter { opacity: 0; }
+.app-ready .blob-enter { animation: blob-in 0.7s var(--ease-standard) both; }
+.blob-wrap, .blob-wrap * { pointer-events: none !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  .header-enter, .blob-enter { animation: none; opacity: 1; }
+  .sw-drift { animation: none; }
 }
 
+/* project overlay motion is owned entirely by the GSAP timeline in
+   ProjectsGlobe.tsx (backdrop / flight / text) — no CSS classes here,
+   so there is exactly one driver and no fade-vs-blur mismatch. */
+
+/* hero — moved verbatim from src/sections/Hero.tsx inline <style> (non-visual robustness; selectors/keyframes/delays unchanged) */
+/* masked line reveal — starts only once the app is ready (loader done) */
+.hero-mask { overflow: hidden; padding: 0.12em 0.2em; margin: -0.12em -0.2em; }
+.hero-line {
+  opacity: 0;
+  transform: translateY(110%);
+  will-change: transform, opacity, filter;
+}
+.app-ready .hero-line {
+  animation: hero-line-in 0.9s var(--ease-standard) forwards;
+}
+@keyframes hero-line-in {
+  0% { opacity: 0; transform: translateY(110%); filter: blur(var(--blur-standard)); }
+  30% { opacity: 1; }
+  100% { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+.hero-fade { opacity: 0; }
+.app-ready .hero-fade {
+  animation: hero-fade-in 0.7s var(--ease-standard) forwards;
+}
+@keyframes hero-fade-in {
+  from { opacity: 0; transform: translateY(12px); filter: blur(var(--blur-standard)); }
+  to { opacity: 0.7; transform: translateY(0); filter: blur(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-line, .hero-fade { opacity: 1; transform: none; filter: none; }
+  .app-ready .hero-line, .app-ready .hero-fade { animation: none; }
+}

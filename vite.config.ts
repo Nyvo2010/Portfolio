@@ -1,19 +1,10 @@
-import tailwindcss from '@tailwindcss/vite';
-import react from '@vitejs/plugin-react';
-import path from 'path';
-import {defineConfig} from 'vite';
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 
-export default defineConfig(() => {
-  return {
-    base: './',
-    plugins: [react(), tailwindcss()],
-    resolve: {
-      alias: {
-        '@': path.resolve(__dirname, '.'),
-      },
-    },
-    server: {
-      hmr: process.env.DISABLE_HMR !== 'true',
-    },
-  };
+const configuredBase = process.env.VITE_BASE_PATH;
+
+export default defineConfig({
+  base: configuredBase ? `/${configuredBase.replace(/^\/+|\/+$/g, "")}/` : "/",
+  plugins: [react(), tailwindcss()],
 });

@@ -1,15 +1,3 @@
 title: "Kicks"
-date: "2026-05-01"
-coverImage: "/assets/projects/Kicks-Hero.png"
-tags: ["E-commerce", "Web Design"]
-summary: "Modern, detailed e-commerce experience for sneaker enthusiasts."
-content: |-
-  ![Hero](/assets/projects/Kicks-Hero.png)
-
-  ### Designed for Detail
-  I designed the Kicks website to bridge the gap between high-end 3D aesthetics and e-commerce functionality. 
-
-  ![Inventory](/assets/projects/Kicks-Inventory.png)
-
-  ### Modern E-commerce
-  The final design combines immersive 3D elements with a clean, modern layout to showcase the inventory effectively.
+imageSource: "/assets/projects/Kicks-Hero.png"
+description: "A detailed e-commerce experience for sneaker enthusiasts, experimentation with 3D aesthetics and a clear modern layout."

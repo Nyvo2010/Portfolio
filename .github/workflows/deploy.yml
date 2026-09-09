@@ -1,8 +1,8 @@
-name: Deploy static content to Pages
+name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: ["main", "master"]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -11,32 +11,51 @@ permissions:
   id-token: write
 
 concurrency:
-  group: "pages"
-  cancel-in-progress: false
+  group: pages
+  cancel-in-progress: true
 
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: 22
+          cache: npm
+
       - name: Install dependencies
         run: npm ci
+
       - name: Build
-        run: npm run build
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-      - name: Upload artifact
+        run: |
+          if [ -f public/CNAME ]; then
+            echo "Custom domain detected — building with root base"
+            npm run build
+          else
+            REPO="${GITHUB_REPOSITORY#*/}"
+            echo "Building with project base /$REPO/"
+            VITE_BASE_PATH="$REPO" npm run build
+          fi
+          # Deep links (e.g. /writings/slug) are full page loads — serve the
+          # app on unknown paths so client routing resolves them.
+          cp dist/index.html dist/404.html
+
+      - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './dist'
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
