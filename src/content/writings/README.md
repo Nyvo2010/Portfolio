@@ -5,11 +5,11 @@ Each YAML file contains:
 ```yaml
 title: "Post title"
 date: "2026-09-08"
-imageSource: "/assets/writings/your-cover.png"
 body: |-
   Markdown body
 ```
 
-Images live in `public/assets/writings/` (mirrors
-`public/assets/projects/`), with optional 480w WebP thumbs in
-`public/assets/writings/thumbs/`.
+No cover images or thumbs — writings are text-only, except for
+images embedded mid-text in the Markdown body
+(`![alt](/assets/writings/your-image.png)`). Those live in
+`public/assets/writings/`.

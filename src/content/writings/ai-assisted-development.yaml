@@ -1,6 +1,5 @@
-title: "AI-Assisted Development"
+title: "A Guide to AI-Assisted Development"
 date: "2026-05-24"
-imageSource: "/assets/writings/AI-Assisted-Development-Cover.png"
 body: |-
   ### The Efficiency Gap
 
@@ -93,7 +92,7 @@ body: |-
 
   ---
 
-  ## Sources
+  ### Sources
 
   1. Stack Overflow Developer Survey 2024, AI section, https://survey.stackoverflow.co/2024/ai
   2. Panto AI, "AI Coding Statistics, Adoption, Productivity & Market Metrics", https://www.getpanto.ai/blog/ai-coding-assistant-statistics

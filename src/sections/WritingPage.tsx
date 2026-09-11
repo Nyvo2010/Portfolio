@@ -5,24 +5,21 @@ import Header from "../components/Header";
 import { writings, writingSlug, type Writing } from "../content/content";
 import Contact from "./Contact";
 import { assetUrl } from "../utils/urls";
-import { waitForCritical } from "../utils/ready";
+import { waitForFonts } from "../utils/ready";
 
 export default function WritingPage({ writing }: { writing: Writing }) {
   const [ready, setReady] = useState(false);
 
   // No loading screen here — the page simply fades in once the display
-  // face + hero image are decoded, so there is never a weight flash or
-  // image pop. Cached visits resolve in milliseconds. The fallback caps
-  // a cold visit at 2.5s instead of the 4s font timeout — text in the
-  // fallback face beats a blank page.
+  // face is ready, so there is never a weight flash. Cached visits resolve
+  // in milliseconds. The fallback caps a cold visit at 2.5s instead of
+  // the 4s font timeout — text in the fallback face beats a blank page.
   useEffect(() => {
     let on = true;
     const fallback = window.setTimeout(() => {
       if (on) setReady(true);
     }, 2500);
-    void Promise.allSettled(
-      waitForCritical(writing.imageSource ? [writing.imageSource] : [])
-    ).then(() => {
+    void Promise.allSettled([waitForFonts()]).then(() => {
       if (on) setReady(true);
     });
     return () => {
@@ -43,16 +40,6 @@ export default function WritingPage({ writing }: { writing: Writing }) {
           <h1 className="writing-title t-heading text-balance">{writing.title}</h1>
           <p className="t-body mt-5 opacity-40">{writing.date}</p>
         </header>
-
-        {writing.imageSource && (
-          <img
-            className="mx-auto my-10 block h-auto w-full max-w-2xl"
-            src={writing.imageSource}
-            alt=""
-            loading="eager"
-            decoding="async"
-          />
-        )}
 
         <article className="writing-body mx-auto max-w-2xl">
           <ReactMarkdown

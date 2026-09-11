@@ -18,7 +18,6 @@ export type Writing = {
   id: string;
   title: string;
   date: string;
-  imageSource?: string;
   body: string;
 };
 
@@ -108,9 +107,6 @@ export const writings = Object.entries(rawWritings)
       id: fileId(path),
       title,
       date: stringValue(data.date),
-      imageSource: stringValue(data.imageSource)
-        ? assetUrl(stringValue(data.imageSource))
-        : undefined,
       body,
     };
   })

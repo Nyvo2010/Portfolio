@@ -1,0 +1,65 @@
+title: "The next AI real win won't be a bigger model, but a smaller one"
+date: "2026-09-11"
+body: |-
+  ### The Scaling Wall
+
+  For years the story was simple: bigger models, more compute, better results. Kaplan et al. 2020 gave us the first clean power-law scaling laws for language models: loss drops predictably as parameters and tokens increase. The field ran with it, building GPT-3, Megatron-Turing NLG, Gopher, and beyond.
+
+  Then Hoffmann et al. 2022 dropped Chinchilla. By training over 400 models from 70M to 16B parameters on 5B to 500B tokens, they showed current models were significantly undertrained. For compute-optimal training, model size and training tokens should scale equally: for every doubling of parameters, double the tokens. Chinchilla 70B trained on 1.4T tokens used the same compute as Gopher 280B and outperformed it uniformly on MMLU and downstream tasks, while cutting inference cost by 4×.
+
+  That was the first crack in the “bigger is always better” story. The second came when we started asking about inference, not just training. Sardana et al. 2024, *Beyond Chinchilla-Optimal*, showed that optimal parameter count changes once you account for inference demand. A smaller model trained a bit longer can be cheaper over its lifetime than a bigger model trained optimally for training FLOPs alone.
+
+  More recently, the wall is getting hard to ignore. Sub-scaling laws reported in 2025 show performance improvements decelerate in large models, particularly when data density is high and redundant. High-quality, diverse data matters more than raw token count; beyond an optimal threshold relative to compute, you get diminishing returns.
+
+  A December 2025 note on diminishing returns quantified it: MMLU-Pro accuracy versus training compute follows a sigmoid. Early compute yields big gains; at higher compute, gains flatten dramatically. The marginal accuracy gain per 10× compute increase follows β ≈ 0.554, meaning returns decline by a factor of ~3.6 each decade of additional compute. Getting from 90% to 95% accuracy is roughly five times more compute for just five percentage points.
+
+  The same pattern shows up at test time. Recent work on overthinking in LLM test-time compute scaling finds marginal utility diminishes substantially at higher budgets and models exhibit “overthinking”, abandoning previously correct answers when given too many reasoning tokens. Optimal thinking length varies by problem difficulty; uniform compute allocation is suboptimal. Generating 8,000 tokens costs 16× more than 500 tokens, often with minimal benefit.
+
+  In short: we cannot pass the line of compute per quality indefinitely. The power law is flattening, and the cost curve is steepening.
+
+  ### What limits us
+
+  There are three practical limits that converge at the same time.
+
+  **Data quality and density.** Language is not infinite. The internet has finite high-signal content, and once you’ve seen it multiple times, additional tokens are redundant. Sub-scaling studies find that repeated data causes sub-scaling growth where the rate of performance improvement decelerates. Data quality and diversity become the bottleneck, not FLOPs.
+
+  **Inference economics.** Training is a one-time cost; inference is a continuous one. A model that is 4× smaller but 1% worse on a benchmark can be 4× cheaper to serve, fine-tune, and deploy. For products, the lifetime compute budget is dominated by inference. Profit-optimal training models formalize this: when inverse demand for quality is diminishing, optimal model size and data budget increase near-linearly with hardware efficiency, but total training compute scales sublinearly.
+
+  **Architecture saturation.** Transformers are a local optimum. Scaling attention quadratically with sequence length means longer contexts cost disproportionately more. Pure parameter scaling also increases memory bandwidth pressure. At some point, you’re paying for parameters that sit idle for most inputs.
+
+  ### Where the wins are moving
+
+  If raw scale hits diminishing returns, the next wins come from efficiency.
+
+  **Inference cost as first-class design.** Quantization, distillation, mixture-of-experts, LoRA fine-tuning, FlashAttention, speculative decoding, and better serving systems aren’t workarounds; they’re fundamental advances. When running models is expensive, we have to think differently. That pressure has already driven measurable quality improvements per FLOP.
+
+  **Architecture change over scale.** We’re seeing concrete moves away from pure transformers. NVIDIA’s Nemotron 3 mixes transformer attention with Mamba layers. Qwen3.6 uses Gated DeltaNet instead of attention in parts. These aren’t tweaks; they beat pure transformers on production benchmarks by changing the compute shape, not just the size.
+
+  **Smarter compute allocation.** Instead of giving every problem the same budget, we’re learning to route, compress memory, schedule reasoning steps, and stop early. A model that can decide when more reasoning is useful and when it’s wasted computation uses less energy and often performs better. The human analogy holds: a person who takes ten minutes to solve a ten-second problem isn’t smarter, they’re inefficient.
+
+  **Open-weight as an innovation forcing function.** Open-weight models force efficiency because you can’t just throw more GPUs at consumer hardware. Constraints become the main driver for innovation. Open weights also lower barriers to learning, experimentation, and auditing. For systems engineering, auditability and reliability matter more than leaderboard points.
+
+  ### The practical take
+
+  Bigger models are not banned. They’re just no longer the default lever.
+
+  For researchers: measure quality per FLOP, not just quality. Report inference cost, latency, and memory alongside benchmarks.
+
+  For product teams: start with the smallest model that meets the quality bar for your use case, then invest in data curation, prompting, and architecture tweaks. The MVP mindset applies to models too.
+
+  For builders: treat efficiency as a feature. A smaller, cheaper model that ships is better than a larger, perfect model that never deploys.
+
+  The next AI breakthrough might not be a smarter model. It might be a cheaper way to run one. Cheaper inference doesn’t just make AI more accessible; it changes what we can build and how we think about intelligence.
+
+  Quality per dollar is the new scaling law.
+
+  ---
+  
+  ### Sources
+
+  1. Kaplan et al. 2020, *Scaling Laws for Neural Language Models*
+  2. Hoffmann et al. 2022, *Training Compute-Optimal Large Language Models*, DeepMind
+  3. Sardana et al. 2024, *Beyond Chinchilla-Optimal: Accounting for Inference in Language Model Scaling Laws*
+  4. Hernandez et al. 2022, *Sub-Scaling Laws: On the Role of Data Density and Training Strategies in LLMs*
+  5. Shukla 2025, *The AI Scaling Wall of Diminishing Returns: Of LLMs, Electric Dogs, and General Relativity*
+  6. 2025 arXiv, *When More Thinking Hurts: Overthinking in LLM Test-Time Compute Scaling*

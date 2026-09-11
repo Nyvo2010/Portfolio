@@ -80,6 +80,8 @@ body {
   white-space: normal;
   overflow-wrap: break-word;
   word-break: normal;
+  /* a touch smaller than the global display heading */
+  font-size: clamp(1.9rem, 4.8vw, 4.25rem);
 }
 
 /* writings index titles — same Erode face, small */
