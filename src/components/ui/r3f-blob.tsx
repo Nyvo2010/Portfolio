@@ -320,7 +320,9 @@ export function Blob({
   });
 
   return (      <mesh ref={meshRef} material={material}>
-        <icosahedronGeometry args={[1.45, IS_MOBILE ? 10 : 32]} />
+        {/* detail 24 reads as perfectly smooth chrome at ≤520px while
+            running ~40% fewer vertex-shader noise evals than 32 */}
+        <icosahedronGeometry args={[1.45, IS_MOBILE ? 10 : 24]} />
       </mesh>
   );
 }
@@ -334,9 +336,9 @@ export default function Home({
 }) {
   return (
     <Canvas
-      gl={{ alpha: true, antialias: true }}
+      gl={{ alpha: true, antialias: true, powerPreference: "high-performance" }}
       camera={{ position: [0, 0, 11], fov: 45 }}
-      dpr={[1, IS_MOBILE ? 1 : 1.5]}
+      dpr={[1, IS_MOBILE ? 1 : 1.25]}
       style={{ background: "transparent" }}
     >
       <Blob tone={tone} start={start} />

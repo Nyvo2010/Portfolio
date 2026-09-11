@@ -1,4 +1,5 @@
 import { siteUrl } from "./urls";
+import { smoothTo } from "./smooth";
 
 export const OVERLAY_CLOSE_EVENT = "nyvo:close-overlay";
 
@@ -108,25 +109,14 @@ export function transitionToLink(
   transitionTo(href);
 }
 
-function smoothBehavior(): ScrollBehavior {
-  if (
-    typeof window !== "undefined" &&
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches
-  ) {
-    return "auto";
-  }
-  return "smooth";
-}
-
 /** Scroll to a home-page section that is guaranteed to exist. */
 export function scrollToSection(hash: string) {
   if (typeof window === "undefined" || typeof document === "undefined") return;
-  const behavior = smoothBehavior();
 
   if (hash === "#contact") {
     // Contact is a centered 100dvh closing scene — anchoring to #contact
     // leaves it mid-viewport. The intent is the very bottom of the page.
-    window.scrollTo({ top: document.documentElement.scrollHeight, behavior });
+    smoothTo(document.documentElement.scrollHeight);
     return;
   }
 
@@ -140,20 +130,17 @@ export function scrollToSection(hash: string) {
       const target = document.querySelector("#works");
       if (!target) return;
       const top = target.getBoundingClientRect().top + window.scrollY;
-      window.scrollTo({
-        top: top + target.clientHeight * 0.5,
-        behavior,
-      });
+      smoothTo(top + target.clientHeight * 0.5);
     });
     return;
   }
 
   if (hash === "#home") {
-    window.scrollTo({ top: 0, behavior });
+    smoothTo(0);
     return;
   }
 
-  el.scrollIntoView({ behavior, block: "start" });
+  smoothTo(el as HTMLElement, -80);
 }
 
 /**

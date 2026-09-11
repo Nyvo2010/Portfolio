@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import gsap from "gsap";
 import type { Project } from "../content/content";
 import { OVERLAY_CLOSE_EVENT } from "../utils/navigation";
+import { startSmooth, stopSmooth } from "../utils/smooth";
 
 export type { Project } from "../content/content";
 
@@ -32,7 +33,7 @@ export function ProjectOverlay({
 }) {
   const [rendered, setRendered] = useState<Project | null>(null);
   const [closing, setClosing] = useState(false);
-  const [imageRatio, setImageRatio] = useState(4 / 3);
+  const [imageRatio, setImageRatio] = useState(16 / 9);
   const [imageLoaded, setImageLoaded] = useState(false);
   // Re-measure the destination box when the viewport changes while the
   // overlay is open (rotate/resize) — otherwise the flight lands stale.
@@ -65,7 +66,10 @@ export function ProjectOverlay({
     tlRef.current?.kill();
     tlRef.current = null;
     setClosing(false);
-    setImageRatio(4 / 3);
+    // Start from the known source aspect so the destination box is
+    // exact on the first frame; the onload re-measure only corrects
+    // rounding, never causes a visible resize mid-flight.
+    setImageRatio(project.ratio ?? 16 / 9);
     setImageLoaded(false);
     setRendered(project);
 
@@ -111,8 +115,10 @@ export function ProjectOverlay({
   useEffect(() => {
     if (!isOpen) return;
     document.body.style.overflow = "hidden";
+    stopSmooth();
     return () => {
       document.body.style.overflow = "";
+      startSmooth();
     };
   }, [isOpen]);
 

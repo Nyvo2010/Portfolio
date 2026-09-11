@@ -26,6 +26,12 @@ export default function Loader({ onDone, resources = [] }: LoaderProps) {
     let innerTimer = 0;
     let leaveTimer = 0;
     let mounted = true;
+    // Reduced-motion users never asked for a splash — resolve as soon
+    // as resources settle instead of enforcing the minimum showcase.
+    const reduceMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const minimum = reduceMotion ? 0 : MINIMUM_DURATION;
     const startedAt = performance.now();
     const allResources = Promise.allSettled(resources);
     const maximumWait = new Promise<unknown>((resolve) => {
@@ -35,7 +41,7 @@ export default function Loader({ onDone, resources = [] }: LoaderProps) {
     const update = (now: number) => {
       if (!mounted) return;
       const elapsed = now - startedAt;
-      const timeProgress = Math.min(elapsed / MINIMUM_DURATION, 1);
+      const timeProgress = minimum === 0 ? 1 : Math.min(elapsed / minimum, 1);
       setProgress((current) => Math.max(current, Math.round(timeProgress * 72)));
       if (timeProgress < 1) raf = requestAnimationFrame(update);
     };
@@ -44,7 +50,7 @@ export default function Loader({ onDone, resources = [] }: LoaderProps) {
     Promise.race([allResources, maximumWait]).then(() => {
       if (!mounted) return;
       const elapsed = performance.now() - startedAt;
-      const remaining = Math.max(0, MINIMUM_DURATION - elapsed);
+      const remaining = Math.max(0, minimum - elapsed);
       innerTimer = window.setTimeout(() => {
         if (!mounted) return;
         setProgress(100);

@@ -12,9 +12,14 @@ export default function WritingPage({ writing }: { writing: Writing }) {
 
   // No loading screen here — the page simply fades in once the display
   // face + hero image are decoded, so there is never a weight flash or
-  // image pop. Cached visits resolve in milliseconds.
+  // image pop. Cached visits resolve in milliseconds. The fallback caps
+  // a cold visit at 2.5s instead of the 4s font timeout — text in the
+  // fallback face beats a blank page.
   useEffect(() => {
     let on = true;
+    const fallback = window.setTimeout(() => {
+      if (on) setReady(true);
+    }, 2500);
     void Promise.allSettled(
       waitForCritical(writing.imageSource ? [writing.imageSource] : [])
     ).then(() => {
@@ -22,6 +27,7 @@ export default function WritingPage({ writing }: { writing: Writing }) {
     });
     return () => {
       on = false;
+      window.clearTimeout(fallback);
     };
   }, [writing]);
 

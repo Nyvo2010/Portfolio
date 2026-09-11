@@ -165,26 +165,42 @@ export default function SelectedWorks({
     };
     el.addEventListener("pointerover", onPointerOver);
 
-    // Thumbs load lazily with auto height — each decode changes layout
-    // below the fold and shifts trigger positions. Refresh (debounced) so
-    // the pinned act never starts early/late or jumps mid-scroll.
-    let imgRefresh: number | undefined;
-    const onImgLoad = (e: Event) => {
-      if ((e.target as HTMLElement | null)?.tagName !== "IMG") return;
-      window.clearTimeout(imgRefresh);
-      imgRefresh = window.setTimeout(() => ScrollTrigger.refresh(), 200);
-    };
-    el.addEventListener("load", onImgLoad, true);
-
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     let ctx: gsap.Context | null = null;
+
+    // Correction state — the corner targets are measured from live word
+    // geometry, so they are only exact with the real display face. A
+    // fallback-face measurement bakes in wrong end positions (words land
+    // off-center / off-corner), and rebuilding mid-act would snap
+    // visibly — so late arrivals park a pending flag that rebuilds the
+    // moment scroll rests back at the top, where a rebuild is invisible.
+    let built = false;
+    let pending = false;
+    let cancelled = false;
+    let fontTimer = 0;
+    // Fires from both triggers' onUpdate, but only ever acts when a
+    // correction is parked AND scroll is fully at rest — otherwise a
+    // harmless no-op that keeps the flag for the next rest.
+    const correctSoon = () => {
+      if (!pending) return;
+      requestAnimationFrame(() => {
+        if (!cancelled && pending && !isActive()) {
+          pending = false;
+          build();
+        }
+      });
+    };
+    const restUpdate = (self: { progress: number }) => {
+      if (self.progress === 0) correctSoon();
+    };
 
     const build = () => {
       // revert first so every measurement happens at x: 0, y: 0.
       // rect.left is immune to the rise's y-translation, and after
       // revert the heading sits centered — the exact split baseline.
       ctx?.revert();
+      built = true;
       const mobile = isMobileView();
       const a = el.querySelector<HTMLElement>(".sw-a");
       const b = el.querySelector<HTMLElement>(".sw-b");
@@ -224,7 +240,7 @@ export default function SelectedWorks({
         // what made the words flicker/jump on small screens)
         const riseFrom = mobile ? { y: "12vh" } : { y: "12vh", opacity: 0.6 };
         const riseTo = mobile
-          ? { y: "0vh", ease: WORKS_EASE, scrollTrigger: { id: "works-rise", trigger: el, start: "top bottom", end: "top top", scrub: 1.3 } }
+          ? { y: "0vh", ease: WORKS_EASE, scrollTrigger: { id: "works-rise", trigger: el, start: "top bottom", end: "top top", scrub: 1.3, onUpdate: restUpdate } }
           : {
               y: "0vh",
               opacity: 1,
@@ -235,6 +251,7 @@ export default function SelectedWorks({
                 start: "top bottom",
                 end: "top top",
                 scrub: 1.3,
+                onUpdate: restUpdate,
               },
             };
         gsap.fromTo(".sw-rise", riseFrom, riseTo);
@@ -247,6 +264,7 @@ export default function SelectedWorks({
             start: "top top",
             end: "bottom bottom",
             scrub: 1.3,
+            onUpdate: restUpdate,
           },
         });
         // 2 — brief hold, one heading
@@ -294,10 +312,9 @@ export default function SelectedWorks({
       requestAnimationFrame(() => ScrollTrigger.refresh());
     };
 
-    build();
-
-    // fonts arriving late change word widths — rebuild on fresh measurements,
-    // but never while the act is on screen (that snap is the back-and-forth bug)
+    // Mid-act state helpers — a rebuild re-measures from the untransformed
+    // baseline, so it only ever runs at rest (both triggers at progress
+    // 0 or unstarted); anything mid-flight parks a pending correction.
     const isActive = () => {
       const act = ScrollTrigger.getById("works-act");
       const rise = ScrollTrigger.getById("works-rise");
@@ -305,43 +322,74 @@ export default function SelectedWorks({
       const inRise = !!rise && rise.progress > 0 && rise.progress < 1;
       return inAct || inRise;
     };
-    // once the act has begun (or finished), font widths no longer matter
-    // for the split — rebuilding then re-measures and can make the words
-    // visibly jump mid-page, which reads as a scroll-direction bug
-    const actBegun = () => {
-      const act = ScrollTrigger.getById("works-act");
-      return !!act && act.progress > 0;
-    };
-    const maybeRebuild = (forFonts = false) => {
-      if (forFonts && actBegun()) return;
+    const maybeRebuild = () => {
       if (!isActive()) build();
     };
-    let rebuilt = false;
-    const onFonts = () => {
-      if (rebuilt) return;
-      rebuilt = true;
-      maybeRebuild(true);
+
+    // First build waits for the real display face whenever possible —
+    // the loader gates on these same fonts, so this resolves behind it
+    // and the heading never pops. Slow-face fallback (2s) builds anyway
+    // and parks a correction for the next rest.
+    const startBuild = () => {
+      if (!cancelled) build();
     };
-    if (document.fonts) {
+    let fontSettled = false;
+    try {
+      fontSettled = !!document.fonts?.check?.("350 100px Erode");
+    } catch {
+      fontSettled = false;
+    }
+    if (fontSettled || !document.fonts) {
+      startBuild();
+    } else {
+      fontTimer = window.setTimeout(() => {
+        pending = true;
+        startBuild();
+      }, 2000);
       document.fonts
         .load("350 100px Erode", "Selected Works")
-        .then(onFonts)
-        .catch(onFonts);
-      document.fonts.ready.then(onFonts).catch(() => {});
+        .then(() => {
+          window.clearTimeout(fontTimer);
+          if (cancelled) return;
+          fontSettled = true;
+          if (!built) {
+            // Not measured yet — build immediately even mid-act. One
+            // snap now beats forever-wrong end positions.
+            startBuild();
+          } else if (!isActive()) {
+            pending = false;
+            startBuild();
+          } else {
+            pending = true;
+            correctSoon();
+          }
+        })
+        .catch(() => {
+          window.clearTimeout(fontTimer);
+          startBuild();
+        });
     }
 
-    // resizes move everything — rebuild debounced (skipped mid-act)
+    // resizes move everything — rebuild debounced; a mid-act resize
+    // parks a correction instead of being silently skipped forever
     let rz: number | undefined;
     const onResize = () => {
       window.clearTimeout(rz);
-      rz = window.setTimeout(() => maybeRebuild(false), 300);
+      rz = window.setTimeout(() => {
+        if (isActive()) {
+          pending = true;
+          correctSoon();
+        } else {
+          maybeRebuild();
+        }
+      }, 300);
     };
     window.addEventListener("resize", onResize);
 
     return () => {
+      cancelled = true;
+      window.clearTimeout(fontTimer);
       el.removeEventListener("pointerover", onPointerOver);
-      el.removeEventListener("load", onImgLoad, true);
-      window.clearTimeout(imgRefresh);
       window.removeEventListener("resize", onResize);
       ctx?.revert();
     };
@@ -377,17 +425,18 @@ export default function SelectedWorks({
                     onSelect(p, { x: r.x, y: r.y, w: r.width, h: r.height });
                   }}
                   className="sw-img block w-full cursor-pointer overflow-hidden bg-neutral-100"
+                  style={{ aspectRatio: `${p.ratio}` }}
                   aria-label={`Open ${p.title}`}
                 >
                   <img
-                    src={p.imageSource}
+                    src={p.thumbSource}
                     alt=""
                     aria-hidden
                     loading="lazy"
                     decoding="async"
                     fetchPriority="low"
                     draggable={false}
-                    className="block h-auto w-full object-contain"
+                    className="block h-full w-full object-cover"
                   />
                 </button>
               </div>

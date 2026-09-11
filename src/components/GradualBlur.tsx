@@ -161,6 +161,13 @@ const useIntersectionObserver = (ref: React.RefObject<HTMLDivElement | null>, sh
 const GradualBlur: React.FC<GradualBlurProps> = props => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
+  // Decorative edge haze only — reduced-motion users get none of the
+  // 12 fixed backdrop-filter layers repainting on scroll.
+  const [reduceMotion] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
 
   // Destructure so the memo below only recomputes when an actual value
   // changes — depending on the whole `props` object re-ran every render
@@ -271,7 +278,7 @@ const GradualBlur: React.FC<GradualBlurProps> = props => {
     <div
       ref={containerRef}
       className={`gradual-blur ${config.target === 'page' ? 'gradual-blur-page' : 'gradual-blur-parent'} ${config.className}`}
-      style={containerStyle}
+      style={{ ...containerStyle, display: reduceMotion ? 'none' : containerStyle.display }}
       onMouseEnter={hoverIntensity ? () => setIsHovered(true) : undefined}
       onMouseLeave={hoverIntensity ? () => setIsHovered(false) : undefined}
     >

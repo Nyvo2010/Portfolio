@@ -25,9 +25,13 @@ export default function About() {
         <div aria-hidden className="blob-lane hidden shrink-0 md:block" />
 
         <img
-          src={assetUrl("/PFP.png")}
+          src={assetUrl("/PFP-630.webp")}
           alt="Portrait of Nyvo"
+          width={630}
+          height={840}
           loading="lazy"
+          decoding="async"
+          fetchPriority="low"
           className="aspect-[3/4] w-full max-w-[280px] object-cover md:max-w-[320px] md:justify-self-end"
         />
       </div>

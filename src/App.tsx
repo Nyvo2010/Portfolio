@@ -3,10 +3,9 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import Header from "./components/Header";
 import GradualBlur from "./components/GradualBlur";
 import Loader from "./components/Loader";
-import { assetUrl, routePath } from "./utils/urls";
-import { waitForCritical } from "./utils/ready";
+import { routePath } from "./utils/urls";
+import { waitForFonts } from "./utils/ready";
 import { scrollToInitialHash } from "./utils/navigation";
-import { projects } from "./content/content";
 // Load the heavy WebGL chunk while the loader is visible, then mount it only
 // after the rest of the page is ready.
 const loadBlobScene = () => import("./components/ui/r3f-blob");
@@ -38,11 +37,12 @@ export default function App() {
 
   const resources = useMemo(() => {
     if (!isHome) return [];
-    // Fonts (every weight the CSS uses) + fully decoded images — the
-    // loader holds until ALL of these settle, so reveal never flashes
-    // fallback weights or half-decoded bitmaps.
-    const imageSources = [assetUrl("/PFP.png"), ...projects.map((project) => project.imageSource)];
-    return [loadBlobScene(), ...waitForCritical(imageSources)];
+    // Critical path is fonts + the lazy 3D chunk only. Hero has no
+    // image; PFP + work thumbs stream lazily below the fold with
+    // fixed aspect boxes (no CLS), so they must never hold first
+    // paint. Full-res project files preload on hover (SelectedWorks)
+    // and decode-before-paint in the overlay (ProjectsGlobe).
+    return [loadBlobScene(), waitForFonts()];
   }, [isHome]);
 
   // Only show the loader when there is actually something to wait for:
@@ -95,7 +95,7 @@ export default function App() {
         position="top"
         height="4rem"
         strength={1}
-        divCount={6}
+        divCount={4}
         curve="bezier"
         className="page-edge-blur"
       />
@@ -104,7 +104,7 @@ export default function App() {
         position="bottom"
         height="5rem"
         strength={1}
-        divCount={6}
+        divCount={4}
         curve="bezier"
         className="page-edge-blur"
       />
