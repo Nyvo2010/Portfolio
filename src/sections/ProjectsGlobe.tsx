@@ -114,10 +114,18 @@ export function ProjectOverlay({
   const isOpen = rendered != null;
   useEffect(() => {
     if (!isOpen) return;
-    document.body.style.overflow = "hidden";
     stopSmooth();
+    // Freeze on the ROOT scroller, never on <body>: a body overflow:hidden
+    // turns <body> into a scroll container, which re-anchors the sticky
+    // SelectedWorks stage away from the viewport — the thumbnails jump off
+    // their visible spots, so the overlay flight measures the wrong rect
+    // (starts and returns to the wrong place). overflow:hidden on the html
+    // root freezes the current scroll bar position while sticky stays
+    // anchored to the viewport exactly where the user clicked.
+    const root = document.documentElement;
+    root.style.overflow = "hidden";
     return () => {
-      document.body.style.overflow = "";
+      root.style.overflow = "";
       startSmooth();
     };
   }, [isOpen]);
@@ -187,16 +195,15 @@ export function ProjectOverlay({
       };
     }
 
-    // live source rect — exact position + size of the real pixels.
-    // falls back to the click rect only if the node is gone.
-    const { img: srcImg } = sourceEls(rendered.id);
-    const live = srcImg?.getBoundingClientRect();
+    // Fly from the rect captured at click time — exactly what the user
+    // saw under the cursor. It is the pixel-truth anchor for both
+    // directions: the thumb's own live box can shift by a few px while
+    // the overlay opens (the works frame's idle drift), and the click
+    // rect keeps the flight deterministic and right on the seen spot.
     const from =
-      live && live.width > 2
-        ? { x: live.left, y: live.top, w: live.width, h: live.height }
-        : origin && origin.w > 2
-          ? origin
-          : null;
+      origin && origin.w > 2
+        ? { x: origin.x, y: origin.y, w: origin.w, h: origin.h }
+        : null;
 
     const d = dest.getBoundingClientRect();
     positionPreviewText(d);
@@ -261,15 +268,20 @@ export function ProjectOverlay({
     tl.to(wt, { opacity: 1, duration: 0.5, ease: "power2.inOut" }, 0.4);
 
     // the image itself: one transform, same sharp pixels throughout,
-    // lands exact (dest-sized frame → scale 1, zero offset)
+    // lands exact (dest-sized frame → scale 1, zero offset).
+    // power3.inOut instead of expo.out — the flight spans a tiny
+    // thumbnail → large preview, and a pure ease-out blasts through
+    // most of the distance in the first frames then crawls in, which
+    // reads as a jumpy/wrong path. Symmetric in/out keeps it a
+    // smooth continuous expansion from the thumb to the preview.
     tl.to(
       fly,
       {
         x: 0,
         y: 0,
         scale: 1,
-        duration: 0.9,
-        ease: "expo.out",
+        duration: 0.8,
+        ease: "power3.inOut",
       },
       0.05
     );
@@ -369,9 +381,8 @@ export function ProjectOverlay({
     if (back && fromRef.current && fromRef.current.w > 0) {
       // reverse of the sharp open: the frame keeps its dest-sized layout
       // (full-res raster) and shrinks its transform onto the thumbnail
-      // center — sharp all the way home, then the real thumb unhides.
-      // gsap.to() starts from the live transform, so mid-flight closes
-      // glide smoothly instead of jumping.
+      // center — sharp all the way home. gsap.to() starts from the live
+      // transform, so mid-flight closes glide smoothly instead of jumping.
       const destBox = fromRef.current;
       const destCx = destBox.x + destBox.w / 2;
       const destCy = destBox.y + destBox.h / 2;
@@ -383,24 +394,60 @@ export function ProjectOverlay({
           x: backCx - destCx,
           y: backCy - destCy,
           scale: back.w / destBox.w,
-          duration: 0.7,
-          ease: "expo.inOut",
+          duration: 0.8,
+          ease: "power3.inOut",
         },
-        0.12
+        0
       );
     } else {
       tl.to(
         fly,
-        { opacity: 0, scale: "-=0.04", duration: 0.4, ease: "power2.in" },
-        0.12
+        { opacity: 0, scale: "-=0.04", duration: 0.45, ease: "power2.in" },
+        0
       );
     }
-    // white releases first, then the blur melts back into the page
-    // as the image flies home
+    // Close IS the open reversed — one continuous gesture, not phases:
+    // text blurs out, and while the image dives back home the white
+    // sheet and the page-blur melt away AROUND it in the same stroke
+    // they used to fade in with. The page re-materializes in the margin
+    // as the image shrinks, exactly like it dissolved when the image
+    // grew, so the close reads as the mirror of the open and takes the
+    // same length of time. The thumbnail reappears the instant the
+    // flight lands underneath it — never earlier, so there is never a
+    // duplicated image on screen.
+    const restoreThumb = () => {
+      const { btn, img } = sourceEls(rendered.id);
+      if (btn) btn.style.visibility = "";
+      // Snap the parked flight onto the thumb's LIVE rect — the works
+      // frames idle-drift a few px even mid-fade, so without this the
+      // hand-off at unmount would leave a tiny gap.
+      if (img && flyRef.current && fromRef.current && fromRef.current.w > 0) {
+        const r = img.getBoundingClientRect();
+        const destBox = fromRef.current;
+        gsap.set(flyRef.current, {
+          x: r.x + r.width / 2 - (destBox.x + destBox.w / 2),
+          y: r.y + r.height / 2 - (destBox.y + destBox.h / 2),
+          scale: r.width / destBox.w,
+        });
+      }
+    };
+    tl.call(restoreThumb, undefined, ">");
+    // the melts use opacity only, exactly like the open: the backdrop
+    // keeps its static blur(40px) layer as a pre-rendered composited
+    // texture and fades its intensity, so the background dissolves
+    // without re-rasterizing a full-viewport blur every frame.
     if (wt) {
-      tl.to(wt, { opacity: 0, duration: 0.35, ease: "power2.out" }, 0);
+      tl.to(wt, { opacity: 0, duration: 0.45, ease: "power2.inOut" }, 0.15);
     }
-    tl.to(bd, { opacity: 0, duration: 0.6, ease: "power2.inOut" }, 0.12);
+    tl.to(
+      bd,
+      {
+        opacity: 0,
+        duration: 0.5,
+        ease: "power2.inOut",
+      },
+      0.25
+    );
   }, [rendered, origin, finishClose]);
 
   useEffect(() => {
