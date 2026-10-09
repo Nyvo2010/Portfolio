@@ -65,13 +65,17 @@ body {
   font-synthesis: none;
   font-size: clamp(2.6rem, 7.5vw, 7.5rem);
   line-height: 1.02;
-  letter-spacing: -0.015em;
+  /* Apple: tracking must scale with size — tighten more as headings grow,
+     since the clamp() range spans 2.6–7.5rem and a fixed value is wrong somewhere */
+  letter-spacing: clamp(-0.03em, -0.01em - 0.4vw, -0.015em);
 }
 .t-body {
   font-family: var(--font-sans);
   font-size: 16px;
+  /* a real, slightly-positive tracking (a size-appropriate bump —
+     hex-level weight alone doesn't fully separate small text from the display face) */
+  letter-spacing: 0.01rem;
   line-height: 1.6;
-  letter-spacing: 0;
 }
 /* writing page titles wrap at word boundaries while staying centered. */
 .writing-title {
@@ -167,7 +171,9 @@ body {
   font-size: 18px;
   line-height: 1;
   letter-spacing: -0.01em;
+  border-radius: 4px;
 }
+.header-logo:active { transform: scale(0.96); }
 
 /* header pills — compact, centered text. on hover the arrow slides in
    beside the label and the pair stays centered together. */
@@ -207,7 +213,8 @@ body {
   opacity: 1;
   margin-left: 0.35rem;
 }
-.pill:active { transform: scaleX(0.98); }
+/* Apple press feedback: scale down uniformly on touch-down, instantly, not on release */
+.pill:active { transform: scale(0.96); }
 
 /* header entrance on page load */
 @keyframes header-drop {
@@ -226,6 +233,15 @@ body {
 .blob-enter { opacity: 0; }
 .app-ready .blob-enter { animation: blob-in 0.7s var(--ease-standard) both; }
 .blob-wrap, .blob-wrap * { pointer-events: none !important; }
+
+/* Writings index rows and Contact links — plain text currently has no
+   affordance until hover; add press-down feedback matched to the pills. */
+.row-link, .contact-link {
+  cursor: pointer;
+}
+.row-link:active, .contact-link:active {
+  opacity: 0.45;
+}
 
 @media (prefers-reduced-motion: reduce) {
   .header-enter, .blob-enter { animation: none; opacity: 1; }

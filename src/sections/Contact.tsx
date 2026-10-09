@@ -19,7 +19,7 @@ export default function Contact() {
             href={l.href}
             target={l.href.startsWith("http") ? "_blank" : undefined}
             rel={l.href.startsWith("http") ? "noreferrer" : undefined}
-            className="t-body transition-opacity hover:opacity-50"
+            className="t-body contact-link transition-opacity hover:opacity-50"
           >
             {l.label}
           </a>

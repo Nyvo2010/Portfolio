@@ -424,7 +424,7 @@ export default function SelectedWorks({
                     const r = (img ?? e.currentTarget).getBoundingClientRect();
                     onSelect(p, { x: r.x, y: r.y, w: r.width, h: r.height });
                   }}
-                  className="sw-img block w-full cursor-pointer overflow-hidden bg-neutral-100"
+                  className="sw-img block w-full cursor-pointer overflow-hidden bg-neutral-100 transition-transform duration-150 ease-out active:scale-[0.96]"
                   style={{ aspectRatio: `${p.ratio}` }}
                   aria-label={`Open ${p.title}`}
                 >

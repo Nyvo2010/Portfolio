@@ -13,7 +13,7 @@ export default function Writings() {
             <a
               href={siteUrl(`/writings/${writingSlug(writing)}`)}
               onClick={(e) => transitionToLink(e)}
-              className="group flex w-full flex-col gap-1 py-4 text-left sm:flex-row sm:items-baseline sm:justify-between sm:gap-6"
+              className="row-link group flex w-full flex-col gap-1 py-4 text-left sm:flex-row sm:items-baseline sm:justify-between sm:gap-6"
             >
               <span className="t-post transition-transform duration-300 ease-out group-hover:translate-x-2">
                 {writing.title}
