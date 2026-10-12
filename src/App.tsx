@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import ErrorBoundary from "./components/ErrorBoundary";
 import Header from "./components/Header";
 import GradualBlur from "./components/GradualBlur";
@@ -6,6 +6,7 @@ import Loader from "./components/Loader";
 import { routePath } from "./utils/urls";
 import { waitForFonts } from "./utils/ready";
 import { scrollToInitialHash } from "./utils/navigation";
+import { initReveals } from "./utils/reveal";
 // Load the heavy WebGL chunk while the loader is visible, then mount it only
 // after the rest of the page is ready.
 const loadBlobScene = () => import("./components/ui/r3f-blob");
@@ -43,6 +44,12 @@ export default function App() {
     // paint. Full-res project files preload on hover (SelectedWorks)
     // and decode-before-paint in the overlay (ProjectsGlobe).
     return [loadBlobScene(), waitForFonts()];
+  }, [isHome]);
+
+  // Flag + observe the below-fold sections before first paint, so the
+  // reveal state never flashes visible → hidden on mount.
+  useLayoutEffect(() => {
+    if (isHome) initReveals();
   }, [isHome]);
 
   // Only show the loader when there is actually something to wait for:

@@ -16,7 +16,7 @@ if (
   typeof window !== 'undefined' &&
   !window.matchMedia('(prefers-reduced-motion: reduce)').matches
 ) {
-  const lenis = new Lenis({ lerp: 0.14 });
+  const lenis = new Lenis({ lerp: 0.12 });
   setLenis(lenis);
   lenis.on('scroll', ScrollTrigger.update);
   gsap.ticker.add((time) => {

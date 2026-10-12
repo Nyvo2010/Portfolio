@@ -240,7 +240,7 @@ export default function SelectedWorks({
         // what made the words flicker/jump on small screens)
         const riseFrom = mobile ? { y: "12vh" } : { y: "12vh", opacity: 0.6 };
         const riseTo = mobile
-          ? { y: "0vh", ease: WORKS_EASE, scrollTrigger: { id: "works-rise", trigger: el, start: "top bottom", end: "top top", scrub: 1.3, onUpdate: restUpdate } }
+          ? { y: "0vh", ease: WORKS_EASE, scrollTrigger: { id: "works-rise", trigger: el, start: "top bottom", end: "top top", scrub: 1.0, onUpdate: restUpdate } }
           : {
               y: "0vh",
               opacity: 1,
@@ -250,7 +250,7 @@ export default function SelectedWorks({
                 trigger: el,
                 start: "top bottom",
                 end: "top top",
-                scrub: 1.3,
+                scrub: 1.0,
                 onUpdate: restUpdate,
               },
             };
@@ -263,7 +263,7 @@ export default function SelectedWorks({
             trigger: el,
             start: "top top",
             end: "bottom bottom",
-            scrub: 1.3,
+            scrub: 1.0,
             onUpdate: restUpdate,
           },
         });
@@ -424,7 +424,7 @@ export default function SelectedWorks({
                     const r = (img ?? e.currentTarget).getBoundingClientRect();
                     onSelect(p, { x: r.x, y: r.y, w: r.width, h: r.height });
                   }}
-                  className="sw-img block w-full cursor-pointer overflow-hidden bg-neutral-100 transition-transform duration-150 ease-out active:scale-[0.96]"
+                  className="sw-img group block w-full cursor-pointer overflow-hidden bg-neutral-100 shadow-[0_2px_12px_-6px_rgba(0,0,0,0.18)] transition-[box-shadow] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] hover:shadow-[0_28px_52px_-24px_rgba(0,0,0,0.45)] active:shadow-[0_10px_24px_-14px_rgba(0,0,0,0.35)]"
                   style={{ aspectRatio: `${p.ratio}` }}
                   aria-label={`Open ${p.title}`}
                 >
@@ -436,7 +436,7 @@ export default function SelectedWorks({
                     decoding="async"
                     fetchPriority="low"
                     draggable={false}
-                    className="block h-full w-full object-cover"
+                    className="block h-full w-full object-cover transition-[filter] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:brightness-[1.04] group-active:brightness-[0.94]"
                   />
                 </button>
               </div>

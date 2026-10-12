@@ -43,7 +43,13 @@ export default function NotFound() {
           )}
         </div>
       </div>
-      <main className="relative flex min-h-[100dvh] items-center justify-center overflow-hidden">
+      {/* rise lives on <main> — a transform on the root would un-fix the
+          overlay layer above */}
+      <main
+        className={`relative flex min-h-[100dvh] items-center justify-center overflow-hidden transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+          ready ? "translate-y-0" : "translate-y-3"
+        }`}
+      >
         <div className="pointer-events-none relative z-0 px-6 text-center">
           <h1 className="t-heading text-balance">It&rsquo;s quiet here,<br />try another page?</h1>
           <a

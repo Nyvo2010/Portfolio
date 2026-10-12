@@ -6,10 +6,12 @@ export default function About() {
   return (
     <section
       id="about"
-      className="relative z-10 flex min-h-[52dvh] scroll-mt-20 items-center px-6 pt-12 pb-2 text-black"
+      className="relative z-10 flex min-h-[52dvh] scroll-mt-20 items-center px-6 pt-16 pb-8 text-black md:pt-24 md:pb-16"
     >
-      <div className="grid w-full items-center gap-10 md:grid-cols-[1fr_auto_1fr]">
-        <div className="flex flex-col gap-6">
+      {/* reveal on the grid, not the section — the portrait then settles
+          a beat after the text instead of the whole block moving as one */}
+      <div data-reveal className="grid w-full items-center gap-12 md:grid-cols-[1fr_auto_1fr] md:gap-14">
+        <div className="flex flex-col gap-6 md:gap-7">
           <h2 className="t-heading text-balance">Hey, I&rsquo;m Nyvo</h2>
 
           <p className="t-body max-w-md opacity-70">

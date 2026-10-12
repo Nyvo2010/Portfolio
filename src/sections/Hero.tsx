@@ -20,7 +20,7 @@ export default function Hero() {
         </h1>
 
         <p
-          className="t-body hero-fade mx-auto mt-5 max-w-md opacity-70"
+          className="t-body hero-fade mx-auto mt-6 max-w-md opacity-70 md:mt-8"
           style={{ animationDelay: "0.75s" }}
         >
           Nyvo — creative engineer working between machine learning and design

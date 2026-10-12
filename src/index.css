@@ -52,6 +52,23 @@ body {
      never get to inflate or shrink it for "readability" */
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  /* every interactive element ships its own press feedback — the
+     browser's gray tap flash would double up on it */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* quiet, inverted selection — reads as deliberate instead of the
+   platform's default blue */
+::selection {
+  background: #000;
+  color: #fff;
+}
+
+/* keyboard focus uses the same geometry language as the press feedback */
+:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+  border-radius: 6px;
 }
 
 /* type scale — exactly two sizes.
@@ -172,8 +189,14 @@ body {
   line-height: 1;
   letter-spacing: -0.01em;
   border-radius: 4px;
+  /* press is instant, release is eased — the asymmetry is what makes
+     a tap feel acknowledged rather than animated */
+  transition: transform 0.45s var(--ease-standard);
 }
-.header-logo:active { transform: scale(0.96); }
+.header-logo:active {
+  transform: scale(0.96);
+  transition-duration: 0.08s;
+}
 
 /* header pills — compact, centered text. on hover the arrow slides in
    beside the label and the pair stays centered together. */
@@ -193,7 +216,10 @@ body {
   color: #000;
   border-radius: 4px;
   padding: 0.375rem 0.75rem;
-  transition: background-color 0.25s ease, color 0.25s ease;
+  transition:
+    background-color 0.25s var(--ease-standard),
+    color 0.25s var(--ease-standard),
+    transform 0.45s var(--ease-standard);
   white-space: nowrap;
 }
 .pill:hover, .pill[data-open="true"] {
@@ -206,15 +232,22 @@ body {
   opacity: 0;
   overflow: hidden;
   margin-left: 0;
-  transition: max-width 0.3s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease, margin-left 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  transition:
+    max-width 0.3s var(--ease-standard),
+    opacity 0.25s var(--ease-standard),
+    margin-left 0.3s var(--ease-standard);
 }
 .pill:hover .pill-arrow, .pill[data-open="true"] .pill-arrow {
   max-width: 14px;
   opacity: 1;
   margin-left: 0.35rem;
 }
-/* Apple press feedback: scale down uniformly on touch-down, instantly, not on release */
-.pill:active { transform: scale(0.96); }
+/* Apple press feedback: scale down uniformly on touch-down, instantly;
+   the release back to 1 rides the eased transform above */
+.pill:active {
+  transform: scale(0.96);
+  transition-duration: 0.08s;
+}
 
 /* header entrance on page load */
 @keyframes header-drop {
@@ -235,17 +268,64 @@ body {
 .blob-wrap, .blob-wrap * { pointer-events: none !important; }
 
 /* Writings index rows and Contact links — plain text currently has no
-   affordance until hover; add press-down feedback matched to the pills. */
-.row-link, .contact-link {
+   affordance until hover; add a tint + underline reveal and press-down
+   feedback matched to the pills. Same instant-press / eased-release
+   asymmetry as the header controls. */
+.row-link,
+.contact-link {
   cursor: pointer;
+  transition:
+    background-color 0.4s var(--ease-standard),
+    opacity 0.35s var(--ease-standard),
+    text-decoration-color 0.35s var(--ease-standard);
 }
-.row-link:active, .contact-link:active {
+.contact-link {
+  text-decoration-line: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.45em;
+  text-decoration-color: transparent;
+}
+.contact-link:hover {
+  text-decoration-color: rgb(0 0 0 / 0.3);
+}
+.row-link:active,
+.contact-link:active {
   opacity: 0.45;
+  transition-duration: 0.08s;
+}
+
+/* scroll reveal — one-shot entrance for the below-fold sections.
+   Children rise + deblur on the shared curve and stagger by DOM order.
+   The hidden state only applies once JS flags the document, so a failed
+   script (or reduced motion) never leaves content invisible. */
+.has-reveal [data-reveal] > * {
+  opacity: 0;
+  transform: translate3d(0, 26px, 0);
+  filter: blur(6px);
+  transition:
+    opacity 0.9s var(--ease-standard),
+    transform 0.9s var(--ease-standard),
+    filter 0.9s var(--ease-standard);
+}
+.has-reveal [data-reveal] > *:nth-child(2) { transition-delay: 0.08s; }
+.has-reveal [data-reveal] > *:nth-child(3) { transition-delay: 0.16s; }
+.has-reveal [data-reveal] > *:nth-child(4) { transition-delay: 0.24s; }
+.has-reveal [data-reveal].is-in > * {
+  opacity: 1;
+  transform: none;
+  filter: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .header-enter, .blob-enter { animation: none; opacity: 1; }
   .sw-drift { animation: none; }
+  /* reveals become the final state — a cross-fade at most, never a rise */
+  .has-reveal [data-reveal] > * {
+    opacity: 1;
+    transform: none;
+    filter: none;
+    transition: none;
+  }
 }
 
 /* project overlay motion is owned entirely by the GSAP timeline in

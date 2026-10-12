@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import Header from "../components/Header";
@@ -6,6 +6,7 @@ import { writings, writingSlug, type Writing } from "../content/content";
 import Contact from "./Contact";
 import { assetUrl } from "../utils/urls";
 import { waitForFonts } from "../utils/ready";
+import { initReveals } from "../utils/reveal";
 
 export default function WritingPage({ writing }: { writing: Writing }) {
   const [ready, setReady] = useState(false);
@@ -28,6 +29,12 @@ export default function WritingPage({ writing }: { writing: Writing }) {
     };
   }, [writing]);
 
+  // Same one-shot reveal pass as the home page — the Contact scene at the
+  // end of the article settles in as it enters instead of just sitting there.
+  useLayoutEffect(() => {
+    initReveals();
+  }, []);
+
   return (
     <div
       className={`min-h-[100dvh] bg-white text-black transition-opacity duration-300 ${
@@ -35,7 +42,13 @@ export default function WritingPage({ writing }: { writing: Writing }) {
       }`}
     >
       <Header />
-      <main className="px-6 pt-[22vh] pb-12 sm:px-10 md:px-16">
+      {/* the rise lives on <main>, never the root — a transform on the
+          root would turn the fixed header into a relative one */}
+      <main
+        className={`px-6 pt-[22vh] pb-12 transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] sm:px-10 md:px-16 ${
+          ready ? "translate-y-0" : "translate-y-3"
+        }`}
+      >
         <header className="mx-auto flex min-h-[38vh] max-w-4xl flex-col items-center justify-center text-center">
           <h1 className="writing-title t-heading text-balance">{writing.title}</h1>
           <p className="t-body mt-5 opacity-40">{writing.date}</p>

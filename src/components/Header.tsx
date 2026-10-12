@@ -34,7 +34,7 @@ export default function Header() {
   return (
     <header className="header-enter fixed top-0 inset-x-0 z-[60] bg-transparent">
       <div className="relative flex justify-center px-2 py-1.5">
-        <nav className="flex flex-row items-center gap-1">
+        <nav className="flex flex-row items-center gap-1.5">
           <button
             type="button"
             onClick={(e) => onNav(e, "#home")}
