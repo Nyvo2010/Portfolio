@@ -2,16 +2,20 @@ import * as yaml from "js-yaml";
 import { assetUrl } from "../utils/urls";
 
 export type Project = {
-  id: number;
+  /** Filename without extension (e.g. "vanta") — opaque, never parsed. */
+  id: string;
   title: string;
+  /** Full-res image from the YAML's `imageSource` — grid fallback + overlay. */
   imageSource: string;
-  description: string;
-  /** True pixel aspect (w/h) of the source file — reserves the exact
-      thumb + overlay box before decode, so no layout shift. */
-  ratio: number;
-  /** Small WebP for the grid (480w). The overlay + hover preload keep
-      using the full-res imageSource — the flight needs those pixels. */
+  /** Grid thumb from the YAML's `thumbSource` (aka `thumb`/`thumbnail`/
+      `cover`). Falls back to `imageSource`, so a project never 404s just
+      because no separate thumb file exists yet. */
   thumbSource: string;
+  description: string;
+  /** Optional pixel aspect (w/h) from the YAML's `ratio` (aka `aspect`/
+      `aspectRatio`). When absent the grid + overlay measure the real file
+      at runtime, so no per-project table lives in code. */
+  ratio?: number;
 };
 
 export type Writing = {
@@ -19,6 +23,10 @@ export type Writing = {
   title: string;
   date: string;
   body: string;
+  /** Optional cover from the YAML (`imageSource` aka `cover`/`thumb`/
+      `thumbnail`/`image`). Writings stay text-only when absent. */
+  imageSource?: string;
+  thumbSource?: string;
 };
 
 type RawRecord = Record<string, unknown>;
@@ -49,50 +57,82 @@ function stringValue(value: unknown, fallback = "") {
   return typeof value === "string" ? value : fallback;
 }
 
+function numberValue(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+/** Accepts 1.78, "16/9", "16:9", "1920x1080", "1920 / 1080". */
+function parseRatio(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+    return value;
+  }
+  if (typeof value === "string") {
+    const parts = value
+      .toLowerCase()
+      .split(/[/:x\s]+/)
+      .map(Number)
+      .filter((n) => Number.isFinite(n) && n > 0);
+    if (parts.length === 2) return parts[0] / parts[1];
+    const single = Number(value);
+    if (Number.isFinite(single) && single > 0) return single;
+  }
+  return undefined;
+}
+
 function fileId(path: string) {
   return path.split("/").pop()?.replace(/\.yaml$/, "") ?? "";
 }
 
-/* Measured source dimensions — keeps thumb + overlay boxes exact
-   without touching the YAMLs. Fallback is 16/9. */
-const RATIO_BY_FILE: Record<string, number> = {
-  alto: 1920 / 1080,
-  atlas: 1854 / 1312,
-  kicks: 1920 / 1080,
-  monolith: 1920 / 1080,
-  "pxl-webworks": 3360 / 2100,
-  rubus: 1920 / 1080,
-  vanta: 1920 / 1080,
+type ProjectEntry = {
+  project: Project;
+  order: number | undefined;
+  file: string;
 };
 
 export const projects: Project[] = Object.entries(rawProjects)
-  .sort(([a], [b]) => a.localeCompare(b))
-  .map(([path, source], index) => {
+  .map(([path, source]): ProjectEntry | null => {
     const data = parseYaml(source);
     if (!data) return null;
 
     const imageSource = stringValue(data.imageSource);
     if (!stringValue(data.title) || !imageSource) return null;
 
-    return {
-      id: index + 1,
+    // Thumb is YAML-driven: thumbSource (aka thumb/thumbnail/cover) or
+    // the full image itself. No filename convention is assumed here, so
+    // any project name works and a missing thumb file can never 404 the
+    // grid — it just serves the full file until a thumb is added.
+    const thumbRaw =
+      stringValue(data.thumbSource) ||
+      stringValue(data.thumb) ||
+      stringValue(data.thumbnail) ||
+      stringValue(data.cover) ||
+      imageSource;
+
+    const project: Project = {
+      id: fileId(path),
       title: stringValue(data.title),
       imageSource: assetUrl(imageSource),
+      thumbSource: assetUrl(thumbRaw),
       description: stringValue(data.description),
-      ratio: RATIO_BY_FILE[fileId(path)] ?? 16 / 9,
-      // Grid thumb lives next to the original: /assets/projects/X.png
-      // → /assets/projects/thumbs/X.webp. Falls back to the original
-      // when the pattern doesn't match, so a missing thumb never 404s
-      // the grid — it just serves the full file.
-      thumbSource: assetUrl(
-        imageSource
-          .replace("/assets/projects/", "/assets/projects/thumbs/")
-          .replace(/\.png$/, ".webp")
-      ),
+      ratio: parseRatio(data.ratio ?? data.aspect ?? data.aspectRatio),
+    };
+
+    return {
+      project,
+      // Optional `order` in the YAML controls the grid sequence;
+      // unordered projects fall back to filename order.
+      order: numberValue(data.order),
+      file: fileId(path),
     };
   })
-  .filter((project): project is Project => project !== null)
-  .slice(0, 7);
+  .filter((entry): entry is ProjectEntry => entry !== null)
+  .sort((a, b) => {
+    const ao = a.order ?? Number.POSITIVE_INFINITY;
+    const bo = b.order ?? Number.POSITIVE_INFINITY;
+    if (ao !== bo) return ao - bo;
+    return a.file.localeCompare(b.file);
+  })
+  .map((entry) => entry.project);
 
 export const writings = Object.entries(rawWritings)
   .map(([path, source]): Writing | null => {
@@ -103,11 +143,24 @@ export const writings = Object.entries(rawWritings)
     const body = stringValue(data.body);
     if (!title || !body) return null;
 
+    const imageRaw =
+      stringValue(data.imageSource) ||
+      stringValue(data.cover) ||
+      stringValue(data.image) ||
+      "";
+    const thumbRaw =
+      stringValue(data.thumbSource) ||
+      stringValue(data.thumb) ||
+      stringValue(data.thumbnail) ||
+      "";
+
     return {
       id: fileId(path),
       title,
       date: stringValue(data.date),
       body,
+      ...(imageRaw ? { imageSource: assetUrl(imageRaw) } : {}),
+      ...(thumbRaw ? { thumbSource: assetUrl(thumbRaw) } : {}),
     };
   })
   .filter((writing): writing is Writing => writing !== null)

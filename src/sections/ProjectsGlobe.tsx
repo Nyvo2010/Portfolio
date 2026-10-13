@@ -16,8 +16,8 @@ const reducedMotion = () =>
   typeof window !== "undefined" &&
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-function sourceEls(id: number) {
-  const btn = document.querySelector<HTMLElement>(`[data-thumb="${id}"]`);
+function sourceEls(id: string) {
+  const btn = document.querySelector<HTMLElement>(`[data-thumb="${CSS.escape(id)}"]`);
   const img = btn?.querySelector<HTMLElement>("img") ?? null;
   return { btn, img };
 }

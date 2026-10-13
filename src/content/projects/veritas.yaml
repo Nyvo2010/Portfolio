@@ -1,3 +1,4 @@
 title: "Veritas"
 imageSource: "/assets/projects/Veritas-Mockup.png"
+thumbSource: "/assets/projects/thumbs/Veritas-Mockup.webp"
 description: "A personal experiment in creating an agent that uses Tavily to decompose a search query, research, iteratively refine the results, and write a structured report."

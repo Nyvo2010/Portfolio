@@ -124,6 +124,9 @@ export default function SelectedWorks({
 }) {
   const root = useRef<HTMLElement | null>(null);
   const [mobile, setMobile] = useState(isMobileView);
+  // True thumb aspects measured from the real files — fills in whenever
+  // a YAML omits `ratio`, so no per-project table lives in code.
+  const [measured, setMeasured] = useState<Record<string, number>>({});
 
   // re-render the thumb grid when crossing the mobile breakpoint /
   // rotating the phone, so the bigger mobile thumbs always use the
@@ -144,9 +147,9 @@ export default function SelectedWorks({
 
     // full-res preload is per-thumb on hover — the flying preview image
     // then hits the memory cache instead of the network, without
-    // downloading all 7 full-res files at page load (which used to
+    // downloading all full-res files at page load (which used to
     // fight the grid thumbs for bandwidth)
-    const preloaded = new Set<number>();
+    const preloaded = new Set<string>();
     const preload = (url: string) => {
       const im = new Image();
       im.src = url;
@@ -155,8 +158,8 @@ export default function SelectedWorks({
     const onPointerOver = (e: PointerEvent) => {
       const btn = (e.target as HTMLElement | null)?.closest?.("[data-thumb]") as HTMLElement | null;
       if (!btn) return;
-      const id = Number(btn.dataset.thumb);
-      if (!Number.isInteger(id) || preloaded.has(id)) return;
+      const id = btn.dataset.thumb ?? "";
+      if (!id || preloaded.has(id)) return;
       preloaded.add(id);
       const p = projects.find((x) => x.id === id);
       if (p) {
@@ -399,11 +402,15 @@ export default function SelectedWorks({
     <section id="works" ref={root} className="relative z-10 -mt-6 h-[200vh] scroll-mt-20 text-black">
       <div className="sw-stage sticky top-0 flex h-[100dvh] items-center justify-center overflow-hidden">
         {/* image net — each thumb keeps its source aspect ratio so the overlay
-            flying image starts pixel-exact on the same visible pixels */}
+            flying image starts pixel-exact on the same visible pixels.
+            Thumbs are YAML-driven (thumbSource, else the full image): any
+            project name works, and a missing thumb file falls back to the
+            full image at runtime instead of breaking the grid. */}
         <div className="absolute inset-0">
           {projects.map((p, i) => {
             const spots = mobile ? MOBILE_SPOTS : DESKTOP_SPOTS;
             const s = spots[i % spots.length];
+            const ratio = measured[p.id] ?? p.ratio ?? 16 / 9;
             return (
               <div
                 key={p.id}
@@ -425,7 +432,7 @@ export default function SelectedWorks({
                     onSelect(p, { x: r.x, y: r.y, w: r.width, h: r.height });
                   }}
                   className="sw-img group block w-full cursor-pointer overflow-hidden bg-neutral-100 shadow-[0_2px_12px_-6px_rgba(0,0,0,0.18)] transition-[box-shadow] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] hover:shadow-[0_28px_52px_-24px_rgba(0,0,0,0.45)] active:shadow-[0_10px_24px_-14px_rgba(0,0,0,0.35)]"
-                  style={{ aspectRatio: `${p.ratio}` }}
+                  style={{ aspectRatio: `${ratio}` }}
                   aria-label={`Open ${p.title}`}
                 >
                   <img
@@ -436,6 +443,22 @@ export default function SelectedWorks({
                     decoding="async"
                     fetchPriority="low"
                     draggable={false}
+                    onError={(e) => {
+                      // A thumb file that hasn't been generated yet (new
+                      // project) serves the full image instead of 404ing.
+                      const img = e.currentTarget;
+                      if (!img.dataset.fallback) {
+                        img.dataset.fallback = "1";
+                        img.src = p.imageSource;
+                      }
+                    }}
+                    onLoad={(e) => {
+                      const img = e.currentTarget;
+                      if (p.ratio == null && img.naturalWidth > 0 && img.naturalHeight > 0) {
+                        const next = img.naturalWidth / img.naturalHeight;
+                        setMeasured((m) => (m[p.id] === next ? m : { ...m, [p.id]: next }));
+                      }
+                    }}
                     className="block h-full w-full object-cover transition-[filter] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:brightness-[1.04] group-active:brightness-[0.94]"
                   />
                 </button>
