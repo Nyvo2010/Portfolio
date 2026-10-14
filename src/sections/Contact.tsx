@@ -2,6 +2,7 @@ const links = [
   { label: "Email", href: "mailto:niekyuwen@gmail.com" },
   { label: "Github", href: "https://github.com/Nyvo2010" },
   { label: "Linkedin", href: "https://www.linkedin.com/in/niek-vogelaar" },
+  { label: "x.com", href: "https://x.com/nyvo4real" },
 ];
 
 /* Contact — closing scene. Heading + plain contact links, nothing else. */
