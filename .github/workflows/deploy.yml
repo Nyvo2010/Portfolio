@@ -30,6 +30,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Safety net: derive thumbs from the source project images at build time
+      # so the deployed site is correct even if the sync job hasn't run yet.
+      - name: Regenerate project thumbs
+        run: npm run thumbs
+
       - name: Build
         run: |
           if [ -f public/CNAME ]; then
