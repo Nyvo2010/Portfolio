@@ -64,6 +64,13 @@
     margin-top: calc(64 * var(--s));
   }
 
+  /* two or three words per line cannot be justified without huge gaps, so on a
+     phone the display type and the about copy hang left */
+  .display--justify,
+  .lead {
+    text-align: left;
+  }
+
   .rows {
     --cols: 12;
     --skip: 0;
@@ -101,17 +108,9 @@
     opacity: 0.55;
   }
 
-  /* there are no columns to hang the cue in on a phone, so it becomes a small
-     label above the list, set like the other secondary row text */
-  .rows__hint,
-  .rows--stack .rows__hint {
-    position: static;
-    width: auto;
-    margin-bottom: calc(14 * var(--s));
-    font-size: 0.84em;
-    line-height: 1.25;
-    text-align: left;
-    opacity: 0.55;
+  /* a thumb-driven list has no hover, so the cue is desktop only */
+  .rows__hint {
+    display: none;
   }
 
   .rows__media {

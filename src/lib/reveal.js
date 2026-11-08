@@ -39,8 +39,10 @@ export function lineReveals() {
     ScrollTrigger.create({
       trigger: el,
       start: 'top 92%',
-      once: true,
-      onEnter: () => timeline.play(),
+      // every pass replays: lines rise as the block arrives, run back out as it
+      // leaves, from whichever direction it is entered
+      toggleActions: 'play reverse play reverse',
+      animation: timeline,
     });
   });
 }
@@ -64,7 +66,7 @@ export function softReveals() {
       opacity: 0,
       duration: 0.9,
       ease: 'power3.out',
-      scrollTrigger: { trigger: el, start: 'top 94%', once: true },
+      scrollTrigger: { trigger: el, start: 'top 94%', toggleActions: 'play reverse play reverse' },
     });
   });
 
@@ -75,7 +77,7 @@ export function softReveals() {
       duration: 0.85,
       stagger: 0.055,
       ease: 'power3.out',
-      scrollTrigger: { trigger: list, start: 'top 88%', once: true },
+      scrollTrigger: { trigger: list, start: 'top 88%', toggleActions: 'play reverse play reverse' },
     });
   });
 }

@@ -17,7 +17,7 @@ import { initScale } from './lib/scale.js';
 import { lineReveals, softReveals, heroIntro, reduced } from './lib/reveal.js';
 import { initScrollBlur } from './lib/blur.js';
 import { initSmoothScroll } from './lib/scroll.js';
-import { splitLines } from './lib/split.js';
+import { splitLines, unsplit } from './lib/split.js';
 import { initGrainText, renderGrainText } from './lib/grain-text.js';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -36,8 +36,17 @@ function fitDisplays() {
   if (cta && footerStage) fitText(cta, { limit: footerStage, min: 18 });
 }
 
+const mobile = window.matchMedia('(max-width: 860px)');
+
 function splitAll() {
-  document.querySelectorAll(SPLIT).forEach((el) => splitLines(el));
+  document.querySelectorAll(SPLIT).forEach((el) => {
+    // a phone has no width for one element per rendered line: the type wraps to
+    // a word or two, and justifying those lines opens gaps wide enough to read
+    // as broken. There the browser owns the line breaks, and the grain effect
+    // (which paints one canvas per line) sits out.
+    if (mobile.matches) unsplit(el);
+    else splitLines(el);
+  });
 }
 
 async function boot() {
@@ -75,8 +84,11 @@ async function boot() {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => {
       applyScale();
-      fitDisplays();
+      // re-split before fitting: the grain canvas of every split line sits
+      // outside its line box, and that overflow reads as "the text does not
+      // fit", shrinking the display type to its minimum on any resize
       splitAll();
+      fitDisplays();
       renderGrainText();
       if (!reduced()) gsap.set(`${SPLIT} .ln__i`, { yPercent: 0 });
       ScrollTrigger.refresh();

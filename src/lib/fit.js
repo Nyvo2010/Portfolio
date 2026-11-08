@@ -9,6 +9,10 @@ export function fitText(el, { limit = el.parentElement, reserve = 0, min = 14 } 
   const available = () => limit.clientHeight - reserve;
   const ideal = parseFloat(getComputedStyle(el).fontSize) || 16;
 
+  // a limit that has not been laid out yet fails every candidate, which would
+  // drop the type to the minimum: keep the design size until it has a height
+  if (available() <= 0) return;
+
   // scrollHeight also counts ink that spills past the line box, so measure in
   // whole lines at the real line-height instead of trusting it directly
   const fits = (px) => {

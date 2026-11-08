@@ -70,6 +70,12 @@
   pointer-events: none;
 }
 
+/* an unsplit block is painted as one canvas laid over the whole paragraph */
+.is-grain--block {
+  position: relative;
+  color: transparent;
+}
+
 /* every line but the last keeps the justification of the paragraph */
 .display--justify.is-split .ln:not(:last-child) .ln__i,
 .lead.is-split .ln:not(:last-child) .ln__i {
