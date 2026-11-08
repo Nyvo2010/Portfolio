@@ -23,7 +23,7 @@ export const site = {
 export const projects = [
   {
     name: 'Sauron',
-    desc: 'Forest fire drone, school project',
+    desc: 'Forest fire detection drone, school project',
     date: '08.09.26',
     image: '/assets/projects/sauron.webp',
   },
