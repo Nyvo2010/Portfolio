@@ -1,11 +1,19 @@
 /**
- * Grain + progressive-blur text effect (see the implementation spec).
+ * Grain + progressive-blur text effect.
  *
  * Each rendered line is drawn crisp onto its own canvas, its alpha is read
- * back, blurred into a few levels, then blended per pixel along a diagonal -
- * sharp top-left, blurrier bottom-right - with grain eroded into the edges.
- * One canvas per line keeps the existing line reveals animating: the canvas
- * sits inside the line element and moves with it.
+ * back, blurred into a few levels, then blended per pixel along two exponential
+ * diagonals - blur into the bottom-right and, mirrored, into the top-left -
+ * with grain eroded into the edges. One canvas per line keeps the existing line
+ * reveals animating: the canvas sits inside the line element and moves with it.
+ *
+ * The blur levels are kept, so the amount of blur can follow the pointer
+ * without re-blurring anything: only the blend between levels is re-evaluated.
+ * Two mirrored ramps share those levels - one reaching into the bottom-right,
+ * one into the top-left. The pointer crossfades them on both axes: the side it
+ * is on loses blur while the opposite side gains it, so the bottom-right fades
+ * as the cursor moves right or down and the top-left rises to meet it. Neither
+ * corner ever exceeds the static amount.
  *
  * Layout is the spec's: word widths come from the canvas measure of the same
  * font, justified lines spread their gaps to the full width, the last line
@@ -13,13 +21,52 @@
  * sizing, wrapping and spacing stay exactly as the page laid them out.
  */
 
-const SIGMAS = [0, 1.8, 3.2, 4.6, 6.2, 8]; // blur levels @ 2576px reference
-const GRAIN = 2.6; // grain contrast (higher = harder grain)
-const GRAIN_AMOUNT = 0.25; // 0 = no texture, 1 = full texture
+const SIGMAS = [0, 2, 4, 6, 8]; // blur levels @ 2576px reference
+const CURVE = 2.6; // exponential falloff: crisp through the middle, blur at the corners
+const DEAD = 0.03; // dead zone keeps the sharp corner properly sharp
+const GRAIN = 2.7; // grain contrast (higher = harder grain)
+const GRAIN_AMOUNT = 0.31; // 0 = no texture, 1 = full texture
 const REFERENCE_WIDTH = 2576;
 const TEXT_VALUE = 243; // #f3f3f3, the site foreground
 
 const clamp = (value, min, max) => (value < min ? min : value > max ? max : value);
+const CURVE_DENOM = Math.exp(CURVE) - 1;
+const curve = (value) => (Math.exp(CURVE * value) - 1) / CURVE_DENOM;
+
+/* ---------- state shared by every canvas ---------- */
+
+let pointerX = 0; // 0 = cursor at the left edge, 1 = at the right
+let pointerY = 0; // 0 = cursor at the top of the screen, 1 = at the bottom
+let targetX = 0;
+let targetY = 0;
+let rafId = 0;
+
+const caches = new WeakMap(); // canvas -> levels + mirrored ramps + noise + output buffer
+const live = new Set(); // canvases that can be re-blended
+
+/**
+ * One lookup for the whole grain pass: index = alpha byte << 8 | noise byte,
+ * value = the packed pixel. Built once, so a re-blend never touches
+ * Math.random or the grain maths.
+ */
+const GRAIN_LUT = (() => {
+  const lut = new Uint32Array(65536);
+  for (let a = 0; a < 256; a += 1) {
+    const af = a / 255;
+    for (let n = 0; n < 256; n += 1) {
+      let v;
+      if (af <= 0.002) v = 0;
+      else if (af >= 0.998) v = 1;
+      else {
+        const grain = clamp((af - n / 255) * GRAIN + 0.5, 0, 1);
+        v = af + (grain - af) * GRAIN_AMOUNT;
+      }
+      const at = (v * 255 + 0.5) | 0;
+      lut[(a << 8) | n] = (at << 24) | (TEXT_VALUE << 16) | (TEXT_VALUE << 8) | TEXT_VALUE;
+    }
+  }
+  return lut;
+})();
 
 /* ---------- separable box blur x3 ~ gaussian ---------- */
 function boxH(src, dst, w, h, r) {
@@ -67,49 +114,151 @@ const supportsTracking = () => (trackingSupport ??= 'letterSpacing' in scratch()
 
 let measureCtx = null;
 
+const toBytes = (source) => {
+  const out = new Uint8Array(source.length);
+  for (let i = 0; i < source.length; i += 1) out[i] = (clamp(source[i], 0, 1) * 255 + 0.5) | 0;
+  return out;
+};
+
 /**
- * Progressive blur (sharp top-left to blurred bottom-right) with grain eroded
- * into the edges, written straight back into the canvas that was just drawn.
- * `linePx` is where this canvas starts inside its block, so the vertical ramp
- * stays continuous whether one line or a whole paragraph is in here.
+ * Two normalised blur ramps, 0..255 per pixel, exponential rather than linear:
+ * the middle of the block stays nearly sharp while the corners carry almost all
+ * of the blur. `near` reaches into the bottom-right, `far` is its point mirror
+ * into the top-left.
  */
-function finish(ctx, { cw, ch, pad, W, sigmas, linePx, blockPx }) {
-  const data = ctx.getImageData(0, 0, cw, ch).data;
-  const alpha = new Float32Array(cw * ch);
-  for (let i = 0; i < alpha.length; i += 1) alpha[i] = data[i * 4 + 3] / 255;
+function buildRamp(cw, ch, pad, W, linePx, blockPx) {
+  const count = cw * ch;
+  const near = new Uint8Array(count);
+  const far = new Uint8Array(count);
+  const columns = new Float32Array(cw);
+  const columnsFar = new Float32Array(cw);
 
-  const levels = sigmas.map((sigma, i) => (i === 0 ? alpha : blur(alpha, cw, ch, Math.max(0.6, sigma))));
-  const top = levels.length - 1;
+  for (let px = 0; px < cw; px += 1) {
+    const u = clamp((px - pad.x) / W, 0, 1);
+    columns[px] = 0.65 * curve(u);
+    columnsFar[px] = 0.65 * curve(1 - u);
+  }
 
-  const out = new ImageData(cw, ch);
-  const pixels = new Uint32Array(out.data.buffer);
+  const spread = (1 / (1 - DEAD)) * 255;
+  const encode = (t) => (t <= DEAD ? 0 : Math.min(255, ((t - DEAD) * spread) | 0));
 
   for (let py = 0; py < ch; py += 1) {
-    const ty = 0.35 * clamp((linePx + (py - pad.top)) / blockPx, 0, 1);
+    const v = clamp((linePx + (py - pad.top)) / blockPx, 0, 1);
+    const down = 0.35 * curve(v);
+    const downFar = 0.35 * curve(1 - v);
+    const row = py * cw;
     for (let px = 0; px < cw; px += 1) {
-      const t = clamp(0.65 * clamp((px - pad.x) / W, 0, 1) + ty, 0, 1);
-      const f = Math.pow(Math.max(0, (t - 0.04) / 0.96), 1.15) * top; // dead zone keeps the corner sharp
-      const lower = Math.min(top - 1, f | 0);
-      const k = f - lower;
-      const index = py * cw + px;
-      const a = levels[lower][index] * (1 - k) + levels[lower + 1][index] * k;
-
-      let v = 0;
-      if (a > 0.002) {
-        if (a > 0.998) {
-          v = 1;
-        } else {
-          const grain = clamp((a - Math.random()) * GRAIN + 0.5, 0, 1);
-          v = a + (grain - a) * GRAIN_AMOUNT;
-        }
-      }
-
-      const at = (v * 255) | 0;
-      pixels[index] = (at << 24) | (TEXT_VALUE << 16) | (TEXT_VALUE << 8) | TEXT_VALUE;
+      near[row + px] = encode(columns[px] + down);
+      far[row + px] = encode(columnsFar[px] + downFar);
     }
   }
 
-  ctx.putImageData(out, 0, 0);
+  return { near, far };
+}
+
+/** Stable grain, so a re-blend (or a resize) never makes the texture shimmer. */
+function buildNoise(length) {
+  const out = new Uint8Array(length);
+  let seed = 0x9e3779b9 ^ length;
+  for (let i = 0; i < length; i += 1) {
+    seed ^= seed << 13;
+    seed ^= seed >>> 17;
+    seed ^= seed << 5;
+    out[i] = seed & 255;
+  }
+  return out;
+}
+
+const lowerLut = new Uint8Array(256);
+const mixLut = new Float32Array(256);
+
+/**
+ * Blends the cached blur levels at the current pointer position and writes the
+ * pixels back into the canvas. The two mirrored ramps are folded together per
+ * pixel (integer only), and the resulting 0..255 field drives the same
+ * run-based blend as the static effect.
+ */
+function paint(ctx, cache) {
+  const { levels, near, far, noise, image, pixels, count } = cache;
+  const top = levels.length - 1;
+  const px = clamp(pointerX, 0, 1);
+  const py = clamp(pointerY, 0, 1);
+
+  for (let q = 0; q < 256; q += 1) {
+    const f = (q / 255) * top;
+    let lower = f | 0;
+    if (lower >= top) lower = top - 1;
+    lowerLut[q] = lower;
+    mixLut[q] = f - lower;
+  }
+
+  // the side the cursor is on loses blur, the opposite side gains it. Both
+  // axes contribute equally: right/down hands the blur to the top-left,
+  // left/up hands it back to the bottom-right.
+  const towardFar = (px + py) * 0.5;
+  const toFarWeight = (towardFar * 256) | 0;
+  const toNearWeight = 256 - toFarWeight;
+
+  let aFrom = levels[0];
+  let aTo = levels[1];
+  let k = 0;
+  let inv = 1;
+  let prev = -1;
+
+  for (let i = 0; i < count; i += 1) {
+    const toNear = (near[i] * toNearWeight) >> 8;
+    const toFar = (far[i] * toFarWeight) >> 8;
+    const q = toNear > toFar ? toNear : toFar;
+
+    if (q !== prev) {
+      prev = q;
+      const lower = lowerLut[q];
+      aFrom = levels[lower];
+      aTo = levels[lower + 1];
+      k = mixLut[q];
+      inv = 1 - k;
+    }
+    const alpha = (aFrom[i] * inv + aTo[i] * k) | 0;
+    pixels[i] = GRAIN_LUT[(alpha << 8) | noise[i]];
+  }
+
+  ctx.putImageData(image, 0, 0);
+}
+
+/**
+ * Progressive blur (sharp top-left to blurred bottom-right) with grain eroded
+ * into the edges. The blur levels are cached so `paint` can re-blend them when
+ * the pointer moves. `linePx` is where this canvas starts inside its block, so
+ * the vertical ramp stays continuous whether one line or a whole paragraph is
+ * in here.
+ */
+function finish(ctx, { cw, ch, pad, W, sigmas, linePx, blockPx }) {
+  const count = cw * ch;
+  const data = ctx.getImageData(0, 0, cw, ch).data;
+  const alpha = new Float32Array(count);
+  for (let i = 0; i < count; i += 1) alpha[i] = data[i * 4 + 3] / 255;
+
+  const levels = new Array(sigmas.length);
+  levels[0] = toBytes(alpha);
+  for (let i = 1; i < sigmas.length; i += 1) {
+    levels[i] = toBytes(blur(alpha, cw, ch, Math.max(0.6, sigmas[i])));
+  }
+
+  const image = new ImageData(cw, ch);
+  const ramps = buildRamp(cw, ch, pad, W, linePx, blockPx);
+  const cache = {
+    levels,
+    near: ramps.near,
+    far: ramps.far,
+    noise: buildNoise(count),
+    image,
+    pixels: new Uint32Array(image.data.buffer),
+    count,
+  };
+
+  caches.set(ctx.canvas, cache);
+  live.add(ctx.canvas);
+  paint(ctx, cache);
 }
 
 /** Draws one line into its own canvas and paints the effect over it. */
@@ -321,6 +470,77 @@ function renderElement(el) {
   return true;
 }
 
+/* ---------- pointer-driven blur ---------- */
+
+/** Canvases on (or just off) screen, in paint order. */
+function visibleItems() {
+  const items = [];
+  for (const canvas of live) {
+    if (!canvas.isConnected) {
+      live.delete(canvas);
+      continue;
+    }
+    const cache = caches.get(canvas);
+    if (!cache) continue;
+
+    const rect = canvas.getBoundingClientRect();
+    if (rect.bottom < -160 || rect.top > window.innerHeight + 160) continue;
+
+    items.push({ canvas, cache });
+  }
+  return items;
+}
+
+const HOVER_FINE = '(hover: hover) and (pointer: fine)';
+const REDUCED = '(prefers-reduced-motion: reduce)';
+
+// a large hero is several megapixels of blending; a hard budget per frame keeps
+// the effect from ever becoming the reason the page drops a frame. Canvases are
+// picked up by the next frame, so the whole block still lands on the target.
+const FRAME_BUDGET = 8;
+
+let queue = null;
+
+function tick() {
+  rafId = 0;
+
+  const dx = targetX - pointerX;
+  const dy = targetY - pointerY;
+  const moving = Math.abs(dx) > 0.0015 || Math.abs(dy) > 0.0015;
+
+  if (moving) {
+    pointerX += dx * 0.16;
+    pointerY += dy * 0.16;
+  } else if (pointerX !== targetX || pointerY !== targetY) {
+    pointerX = targetX;
+    pointerY = targetY;
+    queue = null; // repaint everything once at the exact value
+  } else if (!queue) {
+    return; // pointer did not move: nothing to repaint
+  }
+
+  if (!queue) queue = visibleItems();
+
+  const start = performance.now();
+  while (queue.length && performance.now() - start < FRAME_BUDGET) {
+    const { canvas, cache } = queue.shift();
+    if (canvas.isConnected) paint(canvas.getContext('2d', { willReadFrequently: true }), cache);
+  }
+  if (!queue.length) queue = null;
+
+  if (moving || queue) rafId = requestAnimationFrame(tick);
+}
+
+function onPointerMove(event) {
+  if (event.pointerType === 'touch') return;
+  // relative to the screen, not the block: left/top are 0, right/bottom are 1
+  targetX = clamp(event.clientX / window.innerWidth, 0, 1);
+  targetY = clamp(event.clientY / window.innerHeight, 0, 1);
+  if (!rafId) rafId = requestAnimationFrame(tick);
+}
+
+let pointerBound = false;
+
 const rendered = new Set();
 let observer = null;
 
@@ -348,6 +568,11 @@ export function initGrainText(selector = '[data-grain]') {
       observer.observe(el);
     }
   });
+
+  if (!pointerBound && !window.matchMedia(REDUCED).matches && window.matchMedia(HOVER_FINE).matches) {
+    pointerBound = true;
+    window.addEventListener('pointermove', onPointerMove, { passive: true });
+  }
 }
 
 /** Re-renders the elements that already have a canvas (the DOM was re-split). */
@@ -358,7 +583,10 @@ export function renderGrainText() {
     // cannot be painted has to fall back to plain text instead of staying
     // transparent until the page is reloaded
     el.classList.remove('is-grain', 'is-grain--block');
-    el.querySelectorAll('.grain__c').forEach((canvas) => canvas.remove());
+    el.querySelectorAll('.grain__c').forEach((canvas) => {
+      live.delete(canvas);
+      canvas.remove();
+    });
     rendered.delete(el);
   });
 }
