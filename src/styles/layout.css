@@ -1,0 +1,26 @@
+.frame {
+  width: 100%;
+  max-width: calc(1920 * var(--s));
+  margin-inline: auto;
+  padding-inline: var(--pad);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: var(--gap);
+}
+
+/* Figma: hero 566-1242, then exactly 400 between every content block */
+.section {
+  padding-top: var(--stack-gap);
+}
+
+[id] {
+  scroll-margin-top: calc(160 * var(--s));
+}
+
+/* wrapper for display reveals; lines animate themselves now */
+.rise {
+  width: 100%;
+}

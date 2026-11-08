@@ -30,24 +30,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Safety net: derive thumbs from the source project images at build time
-      # so the deployed site is correct even if the sync job hasn't run yet.
-      - name: Regenerate project thumbs
-        run: npm run thumbs
-
       - name: Build
-        run: |
-          if [ -f public/CNAME ]; then
-            echo "Custom domain detected — building with root base"
-            npm run build
-          else
-            REPO="${GITHUB_REPOSITORY#*/}"
-            echo "Building with project base /$REPO/"
-            VITE_BASE_PATH="$REPO" npm run build
-          fi
-          # Deep links (e.g. /writings/slug) are full page loads — serve the
-          # app on unknown paths so client routing resolves them.
-          cp dist/index.html dist/404.html
+        run: npm run build
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

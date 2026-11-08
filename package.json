@@ -1,38 +1,24 @@
 {
   "name": "nyvo-portfolio",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
-    "lint": "oxlint",
-    "thumbs": "node scripts/gen-project-thumbs.mjs",
+    "build": "vite build",
     "preview": "vite preview"
   },
-  "dependencies": {
-    "@react-three/drei": "^10.7.8",
-    "@react-three/fiber": "^9.7.0",
-    "gsap": "^3.15.0",
-    "js-yaml": "^4.1.1",
-    "lenis": "^1.3.26",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8",
-    "react-markdown": "^10.1.0",
-    "remark-gfm": "^4.0.1",
-    "three": "^0.185.1"
-  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
   "devDependencies": {
-    "@tailwindcss/vite": "^4.3.3",
-    "@types/js-yaml": "^4.0.9",
-    "@types/node": "^24.13.3",
-    "@types/react": "^19.2.18",
-    "@types/react-dom": "^19.2.4",
-    "@vitejs/plugin-react": "^6.1.0",
-    "oxlint": "^1.79.0",
-    "sharp": "^0.35.5",
-    "tailwindcss": "^4.3.3",
-    "typescript": "~6.0.2",
-    "vite": "^8.2.2"
-  }
+    "vite": "^8.3.6"
+  },
+  "dependencies": {
+    "@fontsource-variable/inter": "^5.3.0",
+    "gsap": "^3.15.1",
+    "simple-icons": "^16.37.0"
+  },
+  "private": true,
+  "type": "module"
 }

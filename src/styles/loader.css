@@ -1,0 +1,14 @@
+.loader {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  background: var(--bg);
+}
+
+.loader__pct {
+  font-size: clamp(12px, 1.05vw, 15px);
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}

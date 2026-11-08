@@ -1,0 +1,97 @@
+.micro {
+  font-size: var(--body);
+  line-height: var(--body-lh);
+  letter-spacing: -0.07em;
+}
+
+/* Inter 800 / 130 / 110 / -3.9, UPPERCASE */
+.display {
+  font-weight: 800;
+  font-size: var(--display);
+  line-height: 0.84615;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+  text-align: left;
+  color: var(--fg);
+}
+
+/* Figma marks only the hero, the about copy and the closing CTA as justified */
+.display--justify,
+.lead {
+  text-align: justify;
+  text-justify: inter-word;
+  hyphens: none;
+}
+
+/* Inter 800 / 60 / 72 / -1.8, justified */
+.lead {
+  font-weight: 800;
+  font-size: var(--lead);
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+  text-indent: 5.2em;
+  color: var(--fg);
+}
+
+/* ----------------------------------------------------------------
+   one element per rendered line, each in its own clip
+---------------------------------------------------------------- */
+.is-split .w {
+  display: inline;
+}
+
+.is-split .ln {
+  display: block;
+  text-indent: 0;
+}
+
+.is-split .ln:first-child {
+  text-indent: inherit;
+}
+
+.is-split .ln__i {
+  display: block;
+  will-change: transform, opacity;
+}
+
+/* ----------------------------------------------------------------
+   grain + progressive blur (see src/lib/grain-text.js): the line keeps its
+   text for layout, selection and screen readers, the canvas paints it
+---------------------------------------------------------------- */
+.is-grain .ln__i {
+  position: relative;
+  color: transparent;
+}
+
+/* the canvas is padded past the line box so the blur is never cut off */
+.grain__c {
+  position: absolute;
+  display: block;
+  pointer-events: none;
+}
+
+/* every line but the last keeps the justification of the paragraph */
+.display--justify.is-split .ln:not(:last-child) .ln__i,
+.lead.is-split .ln:not(:last-child) .ln__i {
+  text-align-last: justify;
+  text-justify: inter-word;
+}
+
+/* ----------------------------------------------------------------
+   header + footer buttons are independent; the hovered one stays lit,
+   everything else in either bar dims (the wordmark never dims)
+---------------------------------------------------------------- */
+.hbtn {
+  display: block;
+  width: fit-content;
+  white-space: nowrap;
+  transition: opacity 0.45s var(--ease-out);
+}
+
+body:has(.header .hbtn:hover, .footer .hbtn:hover) :is(.header, .footer) .hbtn:not(.brand) {
+  opacity: 0.22;
+}
+
+body:has(.header .hbtn:hover, .footer .hbtn:hover) :is(.header, .footer) .hbtn:hover {
+  opacity: 1;
+}

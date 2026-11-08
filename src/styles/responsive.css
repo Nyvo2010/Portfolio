@@ -1,0 +1,185 @@
+@media (max-width: 860px) {
+  :root {
+    /* mobile reads the same design, fitted to 900 design px */
+    --s: calc((var(--vw, 100vw)) / 900);
+  }
+
+  body {
+    letter-spacing: -0.055em;
+  }
+
+  .header__nav,
+  .header__social {
+    display: none;
+  }
+
+  /* location and clock are desktop niceties; on a phone the header is the mark */
+  .header__loc {
+    display: none;
+  }
+
+  .menu-toggle {
+    display: block;
+  }
+
+  .hero {
+    padding-top: calc(164 * var(--s));
+  }
+
+  .hero__foot {
+    margin-top: calc(40 * var(--s));
+  }
+
+  .section {
+    padding-top: calc(208 * var(--s));
+  }
+
+  .section--last {
+    padding-bottom: calc(240 * var(--s));
+  }
+
+  .sec-head {
+    display: block;
+    margin-bottom: calc(72 * var(--s));
+  }
+
+  .sec-head__label {
+    margin-bottom: calc(18 * var(--s));
+  }
+
+  .stack {
+    display: block;
+  }
+
+  .stack__label {
+    margin-bottom: calc(18 * var(--s));
+  }
+
+  .stack__title {
+    width: 100%;
+    margin-top: 0;
+  }
+
+  .stack .rows {
+    margin-top: calc(64 * var(--s));
+  }
+
+  .rows {
+    --cols: 12;
+    --skip: 0;
+    --span: 12;
+  }
+
+  .rows .row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: calc(14 * var(--s));
+    padding-block: calc(7 * var(--s));
+    line-height: 1.25;
+    align-items: baseline;
+  }
+
+  .rows--projects .row__name,
+  .rows--stack .row__name {
+    grid-column: 1 / 2;
+    grid-row: 1;
+  }
+
+  .rows--projects .row__desc,
+  .rows--stack .row__desc {
+    grid-column: 1 / 2;
+    grid-row: 2;
+    text-align: left;
+    font-size: 0.84em;
+    opacity: 0.55;
+  }
+
+  .rows--projects .row__date {
+    grid-column: 2 / 3;
+    grid-row: 1 / 3;
+    align-self: center;
+    font-size: 0.84em;
+    opacity: 0.55;
+  }
+
+  .rows__media {
+    width: calc(420 * var(--s));
+  }
+
+  .rows--stack .rows__media {
+    width: calc(300 * var(--s));
+  }
+
+  .about {
+    display: block;
+  }
+
+  .about__label {
+    margin-bottom: calc(18 * var(--s));
+  }
+
+  .about__body {
+    max-width: none;
+    margin-top: 0;
+    text-indent: 2.6em;
+  }
+
+  .about__portrait {
+    width: 100%;
+    margin-top: calc(72 * var(--s));
+  }
+
+  /* the Figma footer block is a desktop proportion; on phones it becomes a
+     simple stack: label, meta, the two link groups on one row, then the CTA */
+  .footer {
+    min-height: 100vh;
+    min-height: 100svh;
+    padding-top: calc(170 * var(--s));
+    padding-bottom: calc(52 * var(--s));
+  }
+
+  .footer__top {
+    row-gap: calc(38 * var(--s));
+    column-gap: var(--gap);
+    margin-bottom: calc(104 * var(--s));
+  }
+
+  .footer__bottom {
+    height: auto;
+  }
+
+  /* on phones the hint stacks under the big text instead of overlapping it */
+  .hero__stage,
+  .footer__stage {
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: stretch;
+  }
+
+  .footer__stage {
+    min-height: 0;
+  }
+
+  /* the scroll hints mean nothing on a thumb-driven page */
+  .hero__foot,
+  .footer__foot {
+    display: none;
+  }
+
+  .footer__label {
+    grid-column: 1 / 13;
+  }
+
+  .footer__meta {
+    grid-column: 1 / 13;
+    line-height: 1.4;
+  }
+
+  /* nav and socials keep the two columns they have on desktop, just narrower */
+  .footer__nav {
+    grid-column: 1 / 7;
+  }
+
+  .footer__social {
+    grid-column: 7 / 13;
+  }
+}

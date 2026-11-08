@@ -1,0 +1,32 @@
+.hero {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100svh;
+  padding-top: calc(136 * var(--s));
+  padding-bottom: calc(60 * var(--s));
+}
+
+.hero__inner {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.hero__stage {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  align-items: flex-end;
+}
+
+/* Figma groups the hint with the display: both boxes share the bottom edge */
+.hero__foot {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: flex-end;
+}

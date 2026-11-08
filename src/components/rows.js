@@ -1,0 +1,176 @@
+import { gsap } from 'gsap';
+import {
+  siFigma,
+  siGithub,
+  siJavascript,
+  siOpencode,
+  siPython,
+  siReact,
+  siTypescript,
+} from 'simple-icons';
+import { vsCodePath } from '../lib/icons.js';
+import { projects, stack } from '../data.js';
+
+const ICONS = {
+  vscode: { path: vsCodePath },
+  figma: siFigma,
+  github: siGithub,
+  javascript: siJavascript,
+  opencode: siOpencode,
+  python: siPython,
+  react: siReact,
+  typescript: siTypescript,
+};
+
+const CODE_GLYPH =
+  'M9.4 16.6 4.8 12l4.6-4.6L8 6l-6 6 6 6zM14.6 16.6 19.2 12l-4.6-4.6L16 6l6 6-6 6z';
+
+function iconMark(key) {
+  const icon = ICONS[key];
+  const path = icon ? icon.path : CODE_GLYPH;
+  return `<span class="plate__mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${path}"/></svg></span>`;
+}
+
+function mediaFor(item, kind) {
+  if (kind === 'stack') {
+    return `<div class="plate plate--logo">${iconMark(item.icon)}</div>`;
+  }
+
+  return `<div class="plate plate--photo">
+    <img src="${item.image}" alt="${item.name} mockup" loading="eager" decoding="async" />
+  </div>`;
+}
+
+function build(root, items, kind) {
+  root.innerHTML = items
+    .map(
+      (item, index) => `<div class="row" tabindex="0" data-index="${index}" aria-label="${item.name}">
+        <span class="row__name">${item.name}</span>
+        <span class="row__desc">${item.desc}</span>
+        ${kind === 'projects' ? `<span class="row__date">${item.date}</span>` : ''}
+      </div>`,
+    )
+    .join('');
+
+  const box = document.createElement('div');
+  box.className = 'rows__box';
+
+  const media = document.createElement('div');
+  media.className = 'rows__media';
+
+  root.append(box, media);
+  return { box, media };
+}
+
+function interact(root, items, kind, box, media) {
+  const rows = [...root.querySelectorAll('.row')];
+  const coarse = window.matchMedia('(hover: none)').matches;
+  // everything has a plate but only projects with a mockup have a photo in it
+  const hasMedia = (index) => kind === 'stack' || Boolean(items[index]?.image);
+  let current = -1;
+  let open = false;
+
+  gsap.set(media, { xPercent: -50, yPercent: -50, opacity: 0, scale: 0.94 });
+  gsap.set(box, { y: 0 });
+
+  const magnetX = gsap.quickTo(media, 'x', { duration: 0.7, ease: 'power3.out' });
+  const magnetY = gsap.quickTo(media, 'y', { duration: 0.7, ease: 'power3.out' });
+
+  const hide = () => {
+    if (!open) return;
+    open = false;
+    current = -1;
+    gsap.to(box, { opacity: 0, duration: 0.26, ease: 'power2.in', overwrite: 'auto' });
+    gsap.to(media, { opacity: 0, duration: 0.26, ease: 'power2.in', overwrite: 'auto' });
+  };
+
+  const magnet = (event) => {
+    const rect = root.getBoundingClientRect();
+    magnetX((event.clientX - (rect.left + rect.width / 2)) * 0.07);
+    magnetY((event.clientY - (rect.top + rect.height / 2)) * 0.07);
+  };
+
+  const select = (index, event) => {
+    const row = rows[index];
+    if (!row) return;
+
+    if (index !== current) {
+      current = index;
+      const rowRect = row.getBoundingClientRect();
+      const listRect = root.getBoundingClientRect();
+
+      gsap.to(box, {
+        y: rowRect.top - listRect.top,
+        height: rowRect.height,
+        duration: 0.42,
+        ease: 'power3.out',
+        overwrite: 'auto',
+      });
+
+      media.innerHTML = hasMedia(index) ? mediaFor(items[index], kind) : '';
+      if (media.firstElementChild) {
+        gsap.fromTo(
+          media.firstElementChild,
+          { scale: 1.04, opacity: 0 },
+          { scale: 1, opacity: 1, duration: 0.45, ease: 'expo.out' },
+        );
+      }
+    }
+
+    open = true;
+    gsap.to(box, { opacity: 1, duration: 0.24, ease: 'power2.out', overwrite: 'auto' });
+    gsap.to(media, {
+      opacity: hasMedia(index) ? 1 : 0,
+      scale: 1,
+      duration: 0.4,
+      ease: 'expo.out',
+      overwrite: 'auto',
+    });
+
+    if (event) magnet(event);
+  };
+
+  if (!coarse) {
+    root.addEventListener('pointermove', (event) => {
+      const row = event.target.closest('.row');
+      if (!row) {
+        hide();
+        return;
+      }
+      select(rows.indexOf(row), event);
+    }, { passive: true });
+    root.addEventListener('pointerleave', hide);
+    window.addEventListener('scroll', hide, { passive: true });
+    window.addEventListener('blur', hide);
+  } else {
+    root.addEventListener('click', (event) => {
+      const row = event.target.closest('.row');
+      if (!row) return;
+      const index = rows.indexOf(row);
+      if (open && current === index) hide();
+      else select(index);
+    });
+  }
+
+  window.addEventListener('resize', () => {
+    if (!open || current < 0) return;
+    const rowRect = rows[current].getBoundingClientRect();
+    const listRect = root.getBoundingClientRect();
+    gsap.set(box, { y: rowRect.top - listRect.top, height: rowRect.height });
+  });
+}
+
+export function mountLists() {
+  projects.forEach((item) => {
+    if (!item.image) return;
+    const image = new Image();
+    image.src = item.image;
+  });
+
+  document.querySelectorAll('[data-rows]').forEach((root) => {
+    const kind = root.dataset.rows === 'stack' ? 'stack' : 'projects';
+    const items = kind === 'stack' ? stack : projects;
+    const { box, media } = build(root, items, kind);
+    interact(root, items, kind, box, media);
+  });
+}

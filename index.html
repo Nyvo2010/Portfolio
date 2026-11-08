@@ -1,23 +1,199 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Nyvo — creative engineer working between machine learning and design for the web." />
-    <meta name="theme-color" content="#fff" />
-    <link rel="icon" type="image/svg+xml" href="%BASE_URL%favicon.svg" />
-    <meta property="og:title" content="Nyvo | Exploring ML and Design" />
-    <meta property="og:description" content="Nyvo — creative engineer working between machine learning and design for the web." />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Nyvo. — Creative developer</title>
+    <meta
+      name="description"
+      content="Nyvo is a creative developer based in the Netherlands exploring the limits of ML and design."
+    />
+    <meta name="theme-color" content="#0c0c0c" />
+    <meta property="og:title" content="Nyvo. — Creative developer" />
+    <meta
+      property="og:description"
+      content="Nyvo is a creative developer based in the Netherlands exploring the limits of ML and design."
+    />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="%BASE_URL%PFP.png" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Nyvo | Exploring ML and Design" />
-    <meta name="twitter:description" content="Nyvo — creative engineer working between machine learning and design for the web." />
-    <meta name="twitter:image" content="%BASE_URL%PFP.png" />
-    <title>Nyvo | Exploring ML and Design</title>
+    <meta name="color-scheme" content="dark" />
+    <!-- critical paint: the loader must cover the page before the bundle arrives -->
+    <style>
+      html {
+        background: #0c0c0c;
+      }
+      body {
+        margin: 0;
+        background: #0c0c0c;
+        color: #f3f3f3;
+        font-family: 'Inter Variable', 'Inter', system-ui, -apple-system, sans-serif;
+        font-weight: 500;
+      }
+      .loader {
+        position: fixed;
+        inset: 0;
+        z-index: 200;
+        display: grid;
+        place-items: center;
+        background: #0c0c0c;
+        font-family: 'Inter Variable', 'Inter', system-ui, -apple-system, sans-serif;
+        font-weight: 500;
+        font-size: 14px;
+        letter-spacing: -0.02em;
+        font-variant-numeric: tabular-nums;
+      }
+    </style>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230c0c0c'/%3E%3Cpath d='M8 24V8h3l9 11V8h4v16h-3l-9-11v11z' fill='%23f3f3f3'/%3E%3C/svg%3E"
+    />
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <div class="loader" data-loader aria-hidden="true">
+      <span class="loader__pct" data-loader-pct>0%</span>
+    </div>
+    <script>
+      /* the count starts from markup, so the curtain never sits at 0% while the
+         bundle is still parsing; the bundle only finishes it off */
+      (function () {
+        var label = document.querySelector('[data-loader-pct]');
+        var value = 0;
+        var timer = setInterval(function () {
+          value = Math.min(90, value + 3);
+          if (label) label.textContent = Math.round(value) + '%';
+          if (value >= 90) clearInterval(timer);
+        }, 70);
+        window.__loaderFinish = function () {
+          clearInterval(timer);
+          if (label) label.textContent = '100%';
+        };
+      })();
+    </script>
+
+    <header class="header" data-header>
+      <div class="header__inner">
+        <a class="brand hbtn" href="#top">Nyvo.</a>
+        <p class="header__loc">Netherlands<span class="loc__time" data-time>00:00</span></p>
+        <nav class="header__nav link-group" aria-label="Primary" data-nav></nav>            <div class="header__social link-group" data-social-list="header"></div>
+      </div>
+    </header>
+
+    <button
+      class="menu-toggle"
+      type="button"
+      data-menu-toggle
+      aria-expanded="false"
+      aria-controls="menu"
+      aria-label="Menu"
+    >
+      <span class="menu-toggle__bar" aria-hidden="true"></span>
+      <span class="menu-toggle__bar" aria-hidden="true"></span>
+    </button>
+
+    <div class="menu" id="menu" data-menu aria-hidden="true">
+      <a class="brand menu__brand" href="#top">Nyvo.</a>
+      <nav class="menu__nav" aria-label="Menu" data-menu-nav></nav>
+      <div class="menu__foot">
+        <div class="menu__social link-group" data-menu-social></div>
+      </div>
+    </div>
+
+    <main id="top">
+      <section class="hero">
+        <div class="frame hero__inner">
+          <div class="hero__stage">
+            <div class="rise" data-intro>
+              <div>
+                <h1 class="display display--justify" data-split data-grain="6">
+                  Nyvo is a creative developer based in the Netherlands exploring the limits of ML and
+                  design
+                </h1>
+              </div>
+            </div>
+            <div class="hero__foot">
+              <a class="hbtn" href="#projects">Scroll down ↓</a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="projects">
+        <div class="frame sec-head" data-blur>
+          <p class="micro sec-head__label" data-rise>. Projects</p>
+          <div class="rise sec-head__title">
+            <div>
+              <h2 class="display" data-split data-grain="6">What I have been building</h2>
+            </div>
+          </div>
+        </div>
+        <div class="frame">
+          <div class="rows rows--projects" data-rows="projects"></div>
+        </div>
+      </section>
+
+      <section class="section" id="about">
+        <div class="frame about" data-blur>
+          <p class="micro about__label" data-rise>. About</p>
+          <div class="about__body">
+            <p class="lead" data-split data-grain="1.5">
+              I’m a creative and curious person who enjoys exploring what’s possible with
+              technology. I like using creativity to solve problems, combining technical thinking for
+              building things that feel refined. Currently exploring the ML space while also being
+              in highschool.
+            </p>
+          </div>
+          <figure class="about__portrait" data-rise>
+            <img
+              src="/assets/portrait.png"
+              alt="Portrait of Niek Vogelaar sitting on stone steps"
+              width="950"
+              height="1174"
+              loading="lazy"
+              decoding="async"
+            />
+          </figure>
+        </div>
+      </section>
+
+      <section class="section section--last" id="stack">
+        <div class="frame stack">
+          <p class="micro stack__label" data-rise>. Stack</p>
+          <div class="rise stack__title" data-blur>
+            <div>
+              <h2 class="display" data-split data-grain="6">The Tech Stack</h2>
+            </div>
+          </div>
+          <div class="rows rows--stack" data-rows="stack"></div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer frame" data-footer>
+      <div class="footer__top grid" data-blur>
+        <p class="micro footer__label" data-rise>. CTA</p>
+        <div class="footer__meta" data-rise>
+          <p>Netherlands<span class="loc__time" data-time>00:00</span></p>
+          <p data-status>Most likely building something</p>
+        </div>
+        <nav class="footer__nav link-group" aria-label="Footer" data-footer-nav></nav>
+        <div class="footer__social link-group" data-social-list="footer"></div>
+      </div>
+
+      <div class="footer__bottom">
+        <div class="footer__stage">
+          <div class="rise">
+            <div>
+              <a class="display display--justify footer__cta" href="#" data-mail data-split data-grain="6">
+                You've made it this far, say hello?
+              </a>
+            </div>
+          </div>
+          <div class="footer__foot">
+            <a class="hbtn" href="#top">Scroll up ↑</a>
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    <script type="module" src="/src/main.js"></script>
   </body>
 </html>
