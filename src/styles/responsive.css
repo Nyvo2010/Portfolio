@@ -31,7 +31,7 @@
   }
 
   .section {
-    padding-top: calc(208 * var(--s));
+    padding-top: calc(260 * var(--s));
   }
 
   .section--last {
@@ -98,6 +98,19 @@
     grid-row: 1 / 3;
     align-self: center;
     font-size: 0.84em;
+    opacity: 0.55;
+  }
+
+  /* there are no columns to hang the cue in on a phone, so it becomes a small
+     label above the list, set like the other secondary row text */
+  .rows__hint,
+  .rows--stack .rows__hint {
+    position: static;
+    width: auto;
+    margin-bottom: calc(14 * var(--s));
+    font-size: 0.84em;
+    line-height: 1.25;
+    text-align: left;
     opacity: 0.55;
   }
 

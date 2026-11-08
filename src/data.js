@@ -21,6 +21,12 @@ export const site = {
 
 /* image is optional: a project without a mockup shows no hover media */
 export const projects = [
+  {
+    name: 'Sauron',
+    desc: 'Forest fire drone, school project',
+    date: '08.09.26',
+    image: '/assets/projects/sauron.webp',
+  },
   { name: 'Veritas', desc: 'OS deep research agent', date: '10.10.26', image: '/assets/projects/veritas.webp' },
   { name: 'Rubus', desc: 'Personal AI assistant', date: '10.12.25', image: '/assets/projects/rubus.webp' },
   {

@@ -59,7 +59,7 @@ button {
 
   --lead: calc(60 * var(--s));
 
-  --stack-gap: calc(400 * var(--s));
+  --stack-gap: calc(520 * var(--s));
 
   --ease-out: cubic-bezier(0.19, 1, 0.22, 1);
 }

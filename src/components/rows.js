@@ -52,13 +52,18 @@ function build(root, items, kind) {
     )
     .join('');
 
+  const hint = document.createElement('span');
+  hint.className = 'rows__hint';
+  hint.textContent = '(Hover)';
+  hint.setAttribute('aria-hidden', 'true');
+
   const box = document.createElement('div');
   box.className = 'rows__box';
 
   const media = document.createElement('div');
   media.className = 'rows__media';
 
-  root.append(box, media);
+  root.append(hint, box, media);
   return { box, media };
 }
 
@@ -75,13 +80,88 @@ function interact(root, items, kind, box, media) {
 
   const magnetX = gsap.quickTo(media, 'x', { duration: 0.7, ease: 'power3.out' });
   const magnetY = gsap.quickTo(media, 'y', { duration: 0.7, ease: 'power3.out' });
+  // quickTo retargets the same tween, so the highlight glides through a fast
+  // pass down the list instead of restarting its ease on every row
+  const boxY = gsap.quickTo(box, 'y', { duration: 0.5, ease: 'power3.out' });
+  const boxH = gsap.quickTo(box, 'height', { duration: 0.5, ease: 'power3.out' });
 
   const hide = () => {
     if (!open) return;
     open = false;
     current = -1;
-    gsap.to(box, { opacity: 0, duration: 0.26, ease: 'power2.in', overwrite: 'auto' });
-    gsap.to(media, { opacity: 0, duration: 0.26, ease: 'power2.in', overwrite: 'auto' });
+    gsap.to(box, { opacity: 0, duration: 0.3, ease: 'power2.in', overwrite: 'auto' });
+    gsap.to(media, { opacity: 0, duration: 0.3, ease: 'power2.in', overwrite: 'auto' });
+  };
+
+  // stack marks swap in one step, the way this list behaved originally: the old
+  // vector is replaced outright, so two logos are never on screen at once, then
+  // the new one fades in from a touch larger
+  const swapLogo = (index) => {
+    media.innerHTML = mediaFor(items[index], 'stack');
+    const plate = media.firstElementChild;
+    if (!plate) return;
+    gsap.fromTo(
+      plate,
+      { scale: 1.04, opacity: 0 },
+      { scale: 1, opacity: 1, duration: 0.45, ease: 'expo.out' },
+    );
+  };
+
+  // the incoming shot wipes up over the one on screen, which holds still as the
+  // backdrop until the reveal finishes: a new row reads as a sheet arriving,
+  // not a dissolve. At most two plates exist, so fast passes cannot pile up.
+  const swapMedia = (index) => {
+    const showing = media.lastElementChild;
+    [...media.children].forEach((plate) => {
+      if (plate !== showing) plate.remove();
+    });
+
+    if (!hasMedia(index)) {
+      if (!showing) return;
+      gsap.to(showing, {
+        opacity: 0,
+        duration: 0.3,
+        ease: 'power2.out',
+        onComplete: () => showing.remove(),
+      });
+      return;
+    }
+
+    if (kind === 'stack') {
+      swapLogo(index);
+      return;
+    }
+
+    const holder = document.createElement('div');
+    holder.innerHTML = mediaFor(items[index], kind);
+    const plate = holder.firstElementChild;
+    if (!plate) return;
+
+    if (showing) {
+      // a wipe that was still running is snapped to fully showing, so it can
+      // cover the previous frame while the new one travels over it
+      gsap.killTweensOf(showing);
+      gsap.set(showing, { clipPath: 'inset(0% 0% 0% 0%)', opacity: 1 });
+    }
+
+    const inner = plate.querySelector('img') || plate;
+
+    media.append(plate);
+    gsap.fromTo(
+      plate,
+      { clipPath: 'inset(100% 0% 0% 0%)' },
+      {
+        clipPath: 'inset(0% 0% 0% 0%)',
+        duration: 0.62,
+        ease: 'expo.out',
+        onComplete: () => {
+          if (showing) showing.remove();
+        },
+      },
+    );
+    // the shot settles inside the wipe, so the reveal has depth rather than
+    // just a moving edge
+    gsap.fromTo(inner, { scale: 1.1 }, { scale: 1, duration: 0.9, ease: 'expo.out' });
   };
 
   const magnet = (event) => {
@@ -94,38 +174,31 @@ function interact(root, items, kind, box, media) {
     const row = rows[index];
     if (!row) return;
 
-    if (index !== current) {
+    const changed = index !== current;
+
+    if (changed) {
       current = index;
       const rowRect = row.getBoundingClientRect();
       const listRect = root.getBoundingClientRect();
 
-      gsap.to(box, {
-        y: rowRect.top - listRect.top,
-        height: rowRect.height,
-        duration: 0.42,
-        ease: 'power3.out',
-        overwrite: 'auto',
-      });
-
-      media.innerHTML = hasMedia(index) ? mediaFor(items[index], kind) : '';
-      if (media.firstElementChild) {
-        gsap.fromTo(
-          media.firstElementChild,
-          { scale: 1.04, opacity: 0 },
-          { scale: 1, opacity: 1, duration: 0.45, ease: 'expo.out' },
-        );
-      }
+      boxY(rowRect.top - listRect.top);
+      boxH(rowRect.height);
+      swapMedia(index);
     }
 
-    open = true;
-    gsap.to(box, { opacity: 1, duration: 0.24, ease: 'power2.out', overwrite: 'auto' });
-    gsap.to(media, {
-      opacity: hasMedia(index) ? 1 : 0,
-      scale: 1,
-      duration: 0.4,
-      ease: 'expo.out',
-      overwrite: 'auto',
-    });
+    // one fade per entry, not one per pointermove: re-tweening the same values
+    // while the cursor travels inside a row only fights the running tween
+    if (changed || !open) {
+      open = true;
+      gsap.to(box, { opacity: 1, duration: 0.26, ease: 'power2.out', overwrite: 'auto' });
+      gsap.to(media, {
+        opacity: hasMedia(index) ? 1 : 0,
+        scale: 1,
+        duration: 0.45,
+        ease: 'expo.out',
+        overwrite: 'auto',
+      });
+    }
 
     if (event) magnet(event);
   };

@@ -115,6 +115,29 @@
   text-align: right;
 }
 
+/* ---------- "(Hover)" cue: top aligned with the list, right aligned in its
+   own box, ending one gutter before the names so it follows the column grid --- */
+
+.rows__hint {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  width: calc((100% + var(--gap)) / var(--cols) * var(--skip) - var(--gap));
+  line-height: var(--row-lh);
+  text-align: right;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* the stack list starts on column 5 of the section grid, so its cue sits in the
+   columns to the left of the list instead of inside it */
+.rows--stack .rows__hint {
+  left: auto;
+  right: calc(100% + var(--gap));
+  width: max-content;
+}
+
 /* inverting highlight box, one line tall */
 .rows__box {
   position: absolute;
