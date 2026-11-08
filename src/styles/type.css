@@ -91,7 +91,7 @@
   display: block;
   width: fit-content;
   white-space: nowrap;
-  transition: opacity 0.45s var(--ease-out);
+  transition: opacity var(--motion-base) var(--ease-out);
 }
 
 body:has(.header .hbtn:hover, .footer .hbtn:hover) :is(.header, .footer) .hbtn:not(.brand) {

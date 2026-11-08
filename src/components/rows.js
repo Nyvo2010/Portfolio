@@ -9,6 +9,7 @@ import {
   siTypescript,
 } from 'simple-icons';
 import { vsCodePath } from '../lib/icons.js';
+import { DUR, EASE } from '../lib/motion.js';
 import { projects, stack } from '../data.js';
 
 const ICONS = {
@@ -78,19 +79,19 @@ function interact(root, items, kind, box, media) {
   gsap.set(media, { xPercent: -50, yPercent: -50, opacity: 0, scale: 0.94 });
   gsap.set(box, { y: 0 });
 
-  const magnetX = gsap.quickTo(media, 'x', { duration: 0.7, ease: 'power3.out' });
-  const magnetY = gsap.quickTo(media, 'y', { duration: 0.7, ease: 'power3.out' });
+  const magnetX = gsap.quickTo(media, 'x', { duration: DUR.large, ease: EASE.out });
+  const magnetY = gsap.quickTo(media, 'y', { duration: DUR.large, ease: EASE.out });
   // quickTo retargets the same tween, so the highlight glides through a fast
   // pass down the list instead of restarting its ease on every row
-  const boxY = gsap.quickTo(box, 'y', { duration: 0.5, ease: 'power3.out' });
-  const boxH = gsap.quickTo(box, 'height', { duration: 0.5, ease: 'power3.out' });
+  const boxY = gsap.quickTo(box, 'y', { duration: DUR.slow, ease: EASE.out });
+  const boxH = gsap.quickTo(box, 'height', { duration: DUR.slow, ease: EASE.out });
 
   const hide = () => {
     if (!open) return;
     open = false;
     current = -1;
-    gsap.to(box, { opacity: 0, duration: 0.3, ease: 'power2.in', overwrite: 'auto' });
-    gsap.to(media, { opacity: 0, duration: 0.3, ease: 'power2.in', overwrite: 'auto' });
+    gsap.to(box, { opacity: 0, duration: DUR.fast, ease: EASE.in, overwrite: 'auto' });
+    gsap.to(media, { opacity: 0, duration: DUR.fast, ease: EASE.in, overwrite: 'auto' });
   };
 
   // stack marks swap in one step, the way this list behaved originally: the old
@@ -103,7 +104,7 @@ function interact(root, items, kind, box, media) {
     gsap.fromTo(
       plate,
       { scale: 1.04, opacity: 0 },
-      { scale: 1, opacity: 1, duration: 0.45, ease: 'expo.out' },
+      { scale: 1, opacity: 1, duration: DUR.slow, ease: EASE.out },
     );
   };
 
@@ -120,8 +121,8 @@ function interact(root, items, kind, box, media) {
       if (!showing) return;
       gsap.to(showing, {
         opacity: 0,
-        duration: 0.3,
-        ease: 'power2.out',
+        duration: DUR.fast,
+        ease: EASE.in,
         onComplete: () => showing.remove(),
       });
       return;
@@ -152,8 +153,8 @@ function interact(root, items, kind, box, media) {
       { clipPath: 'inset(100% 0% 0% 0%)' },
       {
         clipPath: 'inset(0% 0% 0% 0%)',
-        duration: 0.62,
-        ease: 'expo.out',
+        duration: DUR.large,
+        ease: EASE.out,
         onComplete: () => {
           if (showing) showing.remove();
         },
@@ -161,7 +162,7 @@ function interact(root, items, kind, box, media) {
     );
     // the shot settles inside the wipe, so the reveal has depth rather than
     // just a moving edge
-    gsap.fromTo(inner, { scale: 1.1 }, { scale: 1, duration: 0.9, ease: 'expo.out' });
+    gsap.fromTo(inner, { scale: 1.1 }, { scale: 1, duration: DUR.large, ease: EASE.out });
   };
 
   const magnet = (event) => {
@@ -190,12 +191,12 @@ function interact(root, items, kind, box, media) {
     // while the cursor travels inside a row only fights the running tween
     if (changed || !open) {
       open = true;
-      gsap.to(box, { opacity: 1, duration: 0.26, ease: 'power2.out', overwrite: 'auto' });
+      gsap.to(box, { opacity: 1, duration: DUR.base, ease: EASE.out, overwrite: 'auto' });
       gsap.to(media, {
         opacity: hasMedia(index) ? 1 : 0,
         scale: 1,
-        duration: 0.45,
-        ease: 'expo.out',
+        duration: DUR.slow,
+        ease: EASE.out,
         overwrite: 'auto',
       });
     }

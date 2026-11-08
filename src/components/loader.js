@@ -1,4 +1,5 @@
 import { gsap } from 'gsap';
+import { DUR, EASE } from '../lib/motion.js';
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -40,8 +41,8 @@ export function initLoader(onLift) {
           if (onLift) onLift();
           gsap.to(el, {
             yPercent: -100,
-            duration: 0.85,
-            ease: 'expo.inOut',
+            duration: DUR.large,
+            ease: EASE.inOut,
             onComplete: resolve,
           });
           // never let a stalled tween hold the page hostage

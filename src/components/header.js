@@ -1,5 +1,6 @@
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { DUR, EASE } from '../lib/motion.js';
 
 /** Header travels with the page, then leaves when the footer arrives. */
 export function initHeader() {
@@ -15,10 +16,10 @@ export function initHeader() {
     trigger: footer,
     start: () => `top ${offset()}px`,
     onEnter: () => {
-      gsap.to(header, { yPercent: -115, duration: 0.5, ease: 'power2.out', overwrite: true });
+      gsap.to(header, { yPercent: -115, duration: DUR.slow, ease: EASE.out, overwrite: true });
     },
     onLeaveBack: () => {
-      gsap.to(header, { yPercent: 0, duration: 0.6, ease: 'power2.out', overwrite: true });
+      gsap.to(header, { yPercent: 0, duration: DUR.large, ease: EASE.out, overwrite: true });
     },
   });
 }

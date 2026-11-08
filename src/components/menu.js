@@ -1,4 +1,5 @@
 import { gsap } from 'gsap';
+import { DUR, EASE, forTravel } from '../lib/motion.js';
 
 /** Full screen menu for touch and small screens. */
 export function initMenu() {
@@ -33,15 +34,20 @@ export function initMenu() {
   });
 
   timeline
-    .to(root, { autoAlpha: 1, duration: 0.35, ease: 'power2.out' })
-    .from(items, { yPercent: 118, opacity: 0, duration: 0.85, stagger: 0.06, ease: 'expo.out' }, 0.05)
-    .from(foot, { opacity: 0, y: 18, duration: 0.6, ease: 'power2.out' }, 0.35);
+    .to(root, { autoAlpha: 1, duration: DUR.slow, ease: EASE.inOut })
+    .from(
+      items,
+      { yPercent: 118, opacity: 0, duration: DUR.large, stagger: 0.05, ease: EASE.out },
+      0.05,
+    )
+    .from(foot, { opacity: 0, y: 18, duration: forTravel(18), ease: EASE.out }, 0.25);
 
   const setState = (next) => {
     if (busy || next === open) return;
     open = next;
-    if (open) timeline.play();
-    else timeline.reverse();
+    // the exit is a touch quicker than the entrance: the choice is already made
+    if (open) timeline.timeScale(1).play();
+    else timeline.timeScale(1.6).reverse();
   };
 
   toggle.addEventListener('click', () => setState(!open));

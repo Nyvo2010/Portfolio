@@ -1,5 +1,6 @@
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { DUR, EASE, forTravel } from './motion.js';
 
 export const reduced = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -15,7 +16,11 @@ function buildTimeline(el) {
   gsap.set(lines, { yPercent: 55, opacity: 0 });
 
   for (let i = 0; i < count; i += 1) {
-    timeline.to(lines[i], { yPercent: 0, opacity: 1, duration: 1, ease: 'expo.out' }, i * 0.085);
+    timeline.to(
+      lines[i],
+      { yPercent: 0, opacity: 1, duration: DUR.large, ease: EASE.out },
+      i * 0.06,
+    );
   }
 
   timelines.set(el, timeline);
@@ -64,8 +69,8 @@ export function softReveals() {
     gsap.from(el, {
       y: 24,
       opacity: 0,
-      duration: 0.9,
-      ease: 'power3.out',
+      duration: forTravel(24),
+      ease: EASE.out,
       scrollTrigger: { trigger: el, start: 'top 94%', toggleActions: 'play reverse play reverse' },
     });
   });
@@ -74,9 +79,9 @@ export function softReveals() {
     gsap.from(list.querySelectorAll('.row'), {
       y: 22,
       opacity: 0,
-      duration: 0.85,
-      stagger: 0.055,
-      ease: 'power3.out',
+      duration: forTravel(22),
+      stagger: 0.045,
+      ease: EASE.out,
       scrollTrigger: { trigger: list, start: 'top 88%', toggleActions: 'play reverse play reverse' },
     });
   });
@@ -91,6 +96,12 @@ export function heroIntro() {
   playHero();
   const header = document.querySelector('.header__inner');
   if (header) {
-    gsap.from(header, { opacity: 0, y: -10, duration: 0.9, ease: 'power2.out', delay: 0.35 });
+    gsap.from(header, {
+      opacity: 0,
+      y: -10,
+      duration: forTravel(10),
+      ease: EASE.out,
+      delay: 0.15,
+    });
   }
 }
