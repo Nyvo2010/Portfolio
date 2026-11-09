@@ -80,11 +80,6 @@ export function whenIdle(callback, timeout = 1500) {
   return window.setTimeout(() => callback({ didTimeout: true, timeRemaining: () => 0 }), 1);
 }
 
-export function cancelIdle(id) {
-  if (!id) return;
-  if (typeof window.cancelIdleCallback === 'function') window.cancelIdleCallback(id);
-  else window.clearTimeout(id);
-}
 
 /**
  * The expensive parts of the site are all visual: the per-pixel grain canvas,
@@ -122,9 +117,6 @@ export function env() {
     reduced,
     touch,
     weak,
-    // The canvas is the visible text, so it keeps the original 2x cap: lowering
-    // it would visibly soften the type on a high-DPI screen.
-    dprCap: 2,
   };
 
   return cached;

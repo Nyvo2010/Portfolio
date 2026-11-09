@@ -4,8 +4,18 @@ import { replaceChildren } from '../lib/env.js';
 const attrs = (href) =>
   href.startsWith('http') ? ' target="_blank" rel="noopener noreferrer"' : '';
 
+// A hash link only means something on the page that owns the target. Everywhere
+// else it points back to the homepage, so the same nav data works on the lab.
+const resolve = (href) =>
+  href.startsWith('#') && !document.querySelector(href) ? `/${href}` : href;
+
 const render = (items) =>
-  items.map((item) => `<a class="hbtn" href="${item.href}"${attrs(item.href)}>${item.label}</a>`).join('');
+  items
+    .map((item) => {
+      const href = resolve(item.href);
+      return `<a class="hbtn" href="${href}"${attrs(href)}>${item.label}</a>`;
+    })
+    .join('');
 
 export function initLinks() {
   document.querySelectorAll('[data-nav]').forEach((node) => {
@@ -29,7 +39,7 @@ export function initLinks() {
     site.nav.map((item) => {
       const link = document.createElement('a');
       link.className = 'hbtn';
-      link.href = item.href;
+      link.href = resolve(item.href);
       link.textContent = item.label;
       return link;
     }),

@@ -62,15 +62,15 @@ button {
   --stack-gap: calc(420 * var(--s));
 
   /* motion: one shared set, mirrored in src/lib/motion.js */
-  --motion-fast: 120ms; /* hover, focus, button feedback */
-  --motion-base: 200ms; /* small panels, colour and opacity */
-  --motion-slow: 300ms; /* large panels, header, menu */
-  --motion-large: 500ms; /* page-level movement */
+  --motion-fast: 140ms; /* hover, focus, press feedback */
+  --motion-base: 220ms; /* small panels, colour and opacity */
+  --motion-slow: 340ms; /* chrome that travels: header, menu, plates */
+  --motion-large: 560ms; /* page-level movement */
 
-  /* quick start, gentle settle: entrances and feedback */
-  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* quick start, long settle: entrances and feedback */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   /* elements visibly travelling between two states */
-  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-in-out: cubic-bezier(0.76, 0, 0.24, 1);
   /* continuous, non-interactive motion only */
   --ease-linear: linear;
 }
@@ -113,7 +113,11 @@ body {
 
   /* the state change stays, the movement goes */
   .hbtn,
-  .menu-toggle__bar {
+  .menu-toggle__bar,
+  .lab-card,
+  .lab-item,
+  .lab-item__inner,
+  .lab-item img {
     transition: none;
   }
 }

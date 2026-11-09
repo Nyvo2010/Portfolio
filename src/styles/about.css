@@ -20,8 +20,20 @@
 .about__portrait {
   grid-column: 10 / 13;
   align-self: start;
+  position: relative;
   aspect-ratio: 435 / 547;
   margin-top: calc(34 * var(--s));
+  /* the grain canvas is padded so its blur can bleed past the picture */
+  overflow: visible;
+}
+
+/* the canvas is the visible picture once it has painted */
+.about__portrait.is-grain-image img {
+  opacity: 0;
+}
+
+.about__portrait .grain__c {
+  z-index: 1;
 }
 
 .about__portrait img {

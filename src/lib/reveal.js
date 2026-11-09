@@ -1,6 +1,6 @@
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { DUR, EASE, forTravel } from './motion.js';
+import { DUR, DIST, EASE, STAGGER, forTravel } from './motion.js';
 
 export const reduced = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -13,13 +13,13 @@ function buildTimeline(el) {
   if (!count) return null;
 
   const timeline = gsap.timeline({ paused: true });
-  gsap.set(lines, { yPercent: 55, opacity: 0 });
+  gsap.set(lines, { yPercent: DIST.line, opacity: 0 });
 
   for (let i = 0; i < count; i += 1) {
     timeline.to(
       lines[i],
       { yPercent: 0, opacity: 1, duration: DUR.large, ease: EASE.out },
-      i * 0.06,
+      i * STAGGER.line,
     );
   }
 
@@ -67,9 +67,9 @@ export function softReveals() {
   gsap.utils.toArray('[data-rise]').forEach((el) => {
     if (el.closest('[data-split]')) return;
     gsap.from(el, {
-      y: 24,
+      y: DIST.rise,
       opacity: 0,
-      duration: forTravel(24),
+      duration: forTravel(DIST.rise),
       ease: EASE.out,
       scrollTrigger: { trigger: el, start: 'top 94%', toggleActions: 'play reverse play reverse' },
     });
@@ -77,14 +77,36 @@ export function softReveals() {
 
   gsap.utils.toArray('[data-rows]').forEach((list) => {
     gsap.from(list.querySelectorAll('.row'), {
-      y: 22,
+      y: DIST.row,
       opacity: 0,
-      duration: forTravel(22),
-      stagger: 0.045,
+      duration: forTravel(DIST.row),
+      stagger: STAGGER.row,
       ease: EASE.out,
       scrollTrigger: { trigger: list, start: 'top 88%', toggleActions: 'play reverse play reverse' },
     });
   });
+}
+
+/**
+ * The header arrives with the first frame after a curtain, on every page and
+ * on the same curve, so the homepage intro and the lab intro are one gesture.
+ */
+export function introHeader() {
+  if (reduced()) return;
+  const header = document.querySelector('.header__inner');
+  if (!header) return;
+
+  gsap.fromTo(
+    header,
+    { opacity: 0, y: -DIST.header },
+    {
+      opacity: 1,
+      y: 0,
+      duration: forTravel(DIST.header),
+      ease: EASE.out,
+      delay: DUR.fast,
+    },
+  );
 }
 
 export function heroIntro() {
@@ -94,14 +116,5 @@ export function heroIntro() {
   }
 
   playHero();
-  const header = document.querySelector('.header__inner');
-  if (header) {
-    gsap.from(header, {
-      opacity: 0,
-      y: -10,
-      duration: forTravel(10),
-      ease: EASE.out,
-      delay: 0.15,
-    });
-  }
+  introHeader();
 }

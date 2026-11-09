@@ -80,12 +80,12 @@ function interact(root, items, kind, box, media) {
   gsap.set(media, { xPercent: -50, yPercent: -50, opacity: 0, scale: 0.94 });
   gsap.set(box, { y: 0 });
 
-  const magnetX = gsap.quickTo(media, 'x', { duration: DUR.large, ease: EASE.out });
-  const magnetY = gsap.quickTo(media, 'y', { duration: DUR.large, ease: EASE.out });
+  const magnetX = gsap.quickTo(media, 'x', { duration: DUR.slow, ease: EASE.out });
+  const magnetY = gsap.quickTo(media, 'y', { duration: DUR.slow, ease: EASE.out });
   // quickTo retargets the same tween, so the highlight glides through a fast
   // pass down the list instead of restarting its ease on every row
-  const boxY = gsap.quickTo(box, 'y', { duration: DUR.slow, ease: EASE.out });
-  const boxH = gsap.quickTo(box, 'height', { duration: DUR.slow, ease: EASE.out });
+  const boxY = gsap.quickTo(box, 'y', { duration: DUR.base, ease: EASE.out });
+  const boxH = gsap.quickTo(box, 'height', { duration: DUR.base, ease: EASE.out });
 
   // the bar stands a little taller than the row it marks and stays centred on
   // the line, so it reads as a highlight around the text, not a text box
@@ -133,7 +133,7 @@ function interact(root, items, kind, box, media) {
     gsap.fromTo(
       plate,
       { scale: 1.04, opacity: 0 },
-      { scale: 1, opacity: 1, duration: DUR.slow, ease: EASE.out },
+      { scale: 1, opacity: 1, duration: DUR.base, ease: EASE.out },
     );
   };
 
@@ -223,7 +223,7 @@ function interact(root, items, kind, box, media) {
       gsap.to(media, {
         opacity: hasMedia(index) ? 1 : 0,
         scale: 1,
-        duration: DUR.slow,
+        duration: DUR.base,
         ease: EASE.out,
         overwrite: 'auto',
       });

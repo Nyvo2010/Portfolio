@@ -1,14 +1,44 @@
 /**
- * One shared set of durations and curves, mirrored by the --motion-* and
- * --ease-* tokens in base.css so a CSS transition and a GSAP tween feel like
- * the same system. Seconds, because that is what GSAP reads.
+ * One shared set of durations, distances and curves, mirrored by the
+ * --motion-* and --ease-* tokens in base.css so a CSS transition and a GSAP
+ * tween feel like the same system. Seconds, because that is what GSAP reads.
  */
 
 export const DUR = {
-  fast: 0.12, // hover, focus, button feedback
-  base: 0.2, // small panels, colour and opacity
-  slow: 0.3, // large panels, header, menu
-  large: 0.5, // page-level movement: display lines, the curtain
+  fast: 0.14, // hover, focus, press feedback
+  base: 0.22, // small panels, colour and opacity
+  slow: 0.34, // chrome that travels: header, menu, plates
+  large: 0.56, // page-level movement: display lines, the curtain
+  travel: 0.8, // long spatial moves: the lab camera
+};
+
+/** Distances, in the units the tweens use (px, or % of the element). */
+export const DIST = {
+  rise: 24,
+  row: 22,
+  header: 10,
+  line: 55, // % of a display line's own height
+};
+
+/** Shared cadence for anything that arrives as a group. */
+export const STAGGER = {
+  line: 0.055,
+  row: 0.045,
+  menu: 0.04,
+  card: 0.016,
+};
+
+/**
+ * The loader's count and tail. The inline scripts in index.html and
+ * labs/index.html mirror these numbers so the first paint and the module agree.
+ */
+export const LOAD = {
+  count: 0.9,
+  cap: 0.94,
+  tail: 0.2,
+  hold: 0.14,
+  media: 2.2,
+  arrivalMedia: 0.32,
 };
 
 /** Cubic bezier sampled the way CSS samples it. */
@@ -34,19 +64,17 @@ function bezier(x1, y1, x2, y2) {
   };
 }
 
-const enter = bezier(0.2, 0.8, 0.2, 1);
+const enter = bezier(0.16, 1, 0.3, 1);
 
 export const EASE = {
-  // quick start, gentle settle: entrances and user-initiated feedback
+  // quick start, long settle: entrances and user-initiated feedback
   out: enter,
   // the same curve reversed, for exits
   in: (p) => 1 - enter(1 - p),
   // elements visibly travelling between two states
-  inOut: bezier(0.65, 0, 0.35, 1),
-  // continuous, non-interactive motion only
-  linear: (p) => p,
+  inOut: bezier(0.76, 0, 0.24, 1),
 };
 
 /** Longer travel earns a little more time, inside the shared band. */
 export const forTravel = (px, min = DUR.base) =>
-  Math.min(DUR.large, Math.max(min, DUR.base + Math.max(0, px) / 240));
+  Math.min(DUR.slow, Math.max(min, DUR.base + Math.max(0, px) / 240));

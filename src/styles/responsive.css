@@ -34,6 +34,11 @@
     padding-top: calc(210 * var(--s));
   }
 
+  /* the hero's bottom padding already counts towards the same gap */
+  .hero + .section {
+    padding-top: calc(210 * var(--s) - 60 * var(--s));
+  }
+
   .section--last {
     padding-bottom: calc(240 * var(--s));
   }

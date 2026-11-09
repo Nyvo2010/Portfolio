@@ -4,12 +4,14 @@ export const site = {
     { label: 'Projects', href: '#projects' },
     { label: 'About', href: '#about' },
     { label: 'Stack', href: '#stack' },
+    { label: 'Lab', href: '/labs/' },
   ],
   footerNav: [
     { label: 'Top', href: '#top' },
     { label: 'Projects', href: '#projects' },
     { label: 'About', href: '#about' },
     { label: 'Stack', href: '#stack' },
+    { label: 'Lab', href: '/labs/' },
   ],
   socials: [
     { label: 'Email', href: 'mailto:niekyuwen@gmail.com' },
@@ -87,6 +89,22 @@ export const projects = [
     date: '19.05.26',
     image: '/assets/projects/betonbouw.webp',
   },
+];
+
+/*
+ * The homepage teaser shows exactly these pieces, in this order:
+ * cmd-z, drone, avatar 3d, sour first instinct, betonbouw hero.
+ *
+ * The lab page itself is read from public/assets/lab at build time, so every
+ * other image is discovered from the folder: drop a file in or delete one and
+ * the canvas follows without touching a list.
+ */
+export const labHome = [
+  'cmd-z',
+  'drone',
+  'avatar-3d',
+  'sour-first-instinct',
+  'betonbouw-hero',
 ];
 
 export const stack = [

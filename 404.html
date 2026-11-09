@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>404 — Nyvo</title>
+    <meta name="description" content="This page does not exist." />
+    <meta name="theme-color" content="#0c0c0c" />
+    <meta name="robots" content="noindex" />
+    <meta name="color-scheme" content="dark" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        background: #0c0c0c;
+        color: #f3f3f3;
+        font-family: 'Inter Variable', 'Inter', system-ui, -apple-system, sans-serif;
+        font-weight: 500;
+      }
+    </style>
+    <link rel="stylesheet" href="/src/styles/notfound-entry.css" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/favicon.png" />
+  </head>
+  <body class="notfound-page">
+    <header class="header" data-header>
+      <div class="header__inner">
+        <a class="brand hbtn" href="/">N.</a>
+        <p class="header__loc">Netherlands<span class="loc__time" data-time>00:00</span></p>
+        <nav class="header__nav link-group" aria-label="Primary" data-nav></nav>
+        <div class="header__social link-group" data-social-list="header"></div>
+      </div>
+    </header>
+
+    <main class="notfound">
+      <p class="micro notfound__label">. 404</p>
+      <h1 class="display notfound__title" data-grain="6">404</h1>
+      <p class="notfound__desc">
+        The page you were looking for does not exist. It may have moved, or the link is broken.
+      </p>
+    </main>
+
+    <script type="module" src="/src/404.js"></script>
+  </body>
+</html>

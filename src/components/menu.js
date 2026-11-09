@@ -1,6 +1,6 @@
 import { gsap } from 'gsap';
-import { DUR, EASE, forTravel } from '../lib/motion.js';
-import { onMediaChange } from '../lib/env.js';
+import { DUR, EASE, STAGGER } from '../lib/motion.js';
+import { onMediaChange, prefersReducedMotion } from '../lib/env.js';
 
 /** Full screen menu for touch and small screens. */
 export function initMenu() {
@@ -10,8 +10,8 @@ export function initMenu() {
 
   const items = [...root.querySelectorAll('.menu__nav a')];
   const foot = root.querySelector('.menu__foot');
+  const reduced = prefersReducedMotion();
   let open = false;
-  let busy = false;
 
   // Locking both boxes keeps iOS from scrolling the page behind the overlay.
   const lockPage = (locked) => {
@@ -22,40 +22,55 @@ export function initMenu() {
 
   const timeline = gsap.timeline({
     paused: true,
-    onStart: () => {
-      busy = true;
-      root.setAttribute('aria-hidden', 'false');
-      toggle.setAttribute('aria-expanded', 'true');
-      toggle.setAttribute('aria-label', 'Close menu');
-      lockPage(true);
-    },
     onReverseComplete: () => {
-      busy = false;
+      // grabbed again mid-close: the menu is still on its way back in
+      if (open) return;
       root.setAttribute('aria-hidden', 'true');
-      toggle.setAttribute('aria-expanded', 'false');
-      toggle.setAttribute('aria-label', 'Menu');
       lockPage(false);
-    },
-    onComplete: () => {
-      busy = false;
     },
   });
 
+  // fromTo throughout, so a half-played close can run forwards again without a
+  // jump and both ends of the timeline are the same in either direction.
   timeline
-    .to(root, { autoAlpha: 1, duration: DUR.slow, ease: EASE.inOut })
-    .from(
+    .to(root, { autoAlpha: 1, duration: DUR.base, ease: EASE.out })
+    .fromTo(
       items,
-      { yPercent: 118, opacity: 0, duration: DUR.large, stagger: 0.05, ease: EASE.out },
-      0.05,
+      { yPercent: 112, opacity: 0 },
+      { yPercent: 0, opacity: 1, duration: DUR.slow, stagger: STAGGER.menu, ease: EASE.out },
+      DUR.fast,
     )
-    .from(foot, { opacity: 0, y: 18, duration: forTravel(18), ease: EASE.out }, 0.25);
+    .fromTo(
+      foot,
+      { opacity: 0, y: 16 },
+      { opacity: 1, y: 0, duration: DUR.base, ease: EASE.out },
+      DUR.fast + STAGGER.menu * items.length,
+    );
 
   const setState = (next) => {
-    if (busy || next === open) return;
+    if (next === open) return;
     open = next;
-    // the exit is a touch quicker than the entrance: the choice is already made
-    if (open) timeline.timeScale(1).play();
-    else timeline.timeScale(1.6).reverse();
+
+    toggle.setAttribute('aria-expanded', String(open));
+    toggle.setAttribute('aria-label', open ? 'Close menu' : 'Menu');
+    root.setAttribute('aria-hidden', String(!open));
+
+    if (open) {
+      lockPage(true);
+      if (reduced) timeline.progress(1).pause();
+      else timeline.play();
+      return;
+    }
+
+    if (reduced) {
+      timeline.progress(0).pause();
+      root.setAttribute('aria-hidden', 'true');
+      lockPage(false);
+      return;
+    }
+
+    // the exit is the same gesture run backwards, never a faster second one
+    timeline.reverse();
   };
 
   toggle.addEventListener('click', () => setState(!open));
@@ -69,14 +84,12 @@ export function initMenu() {
   });
 
   onMediaChange('(min-width: 861px)', (event) => {
-    if (event.matches && open) {
-      timeline.progress(0).pause();
-      open = false;
-      busy = false;
-      root.setAttribute('aria-hidden', 'true');
-      toggle.setAttribute('aria-expanded', 'false');
-      toggle.setAttribute('aria-label', 'Menu');
-      lockPage(false);
-    }
+    if (!event.matches || !open) return;
+    timeline.progress(0).pause();
+    open = false;
+    root.setAttribute('aria-hidden', 'true');
+    toggle.setAttribute('aria-expanded', 'false');
+    toggle.setAttribute('aria-label', 'Menu');
+    lockPage(false);
   });
 }

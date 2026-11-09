@@ -17,7 +17,7 @@
   top: 50%;
   height: 1.6px;
   background: currentColor;
-  transition: transform var(--motion-slow) var(--ease-in-out);
+  transition: transform var(--motion-base) var(--ease-in-out);
 }
 
 .menu-toggle__bar:first-of-type {

@@ -23,13 +23,21 @@
 
 import { env, isFinePointer, prefersReducedMotion, nextFrame, whenIdle } from './env.js';
 
-const SIGMAS = [0, 2, 4, 6, 8]; // blur levels @ 2576px reference
+export const SIGMAS = [0, 2, 4, 6, 8]; // blur levels @ 2576px reference
 const CURVE = 2.6; // exponential falloff: crisp through the middle, blur at the corners
 const DEAD = 0.03; // dead zone keeps the sharp corner properly sharp
-const GRAIN = 2.7; // grain contrast (higher = harder grain)
-const GRAIN_AMOUNT = 0.31; // 0 = no texture, 1 = full texture
-const REFERENCE_WIDTH = 2576;
+export const GRAIN = 2.7; // grain contrast (higher = harder grain)
+export const GRAIN_AMOUNT = 0.31; // 0 = no texture, 1 = full texture
+export const REFERENCE_WIDTH = 2576;
 const TEXT_VALUE = 243; // #f3f3f3, the site foreground
+// The blur is part of the signature, but 85% of it is enough. The ramps, the
+// pointer crossfade and the grain are untouched: only the sigma scale drops.
+export const BLUR_SCALE = 0.85;
+// A phone paints a heading as one block canvas, so the softened corners read
+// stronger there than on the desktop line-by-line version. Headings keep 70%
+// of the blur at that width; the ramp, crossfade and grain stay untouched.
+const MOBILE_HEADING_SCALE = 0.7;
+const mobile = typeof window.matchMedia === 'function' ? window.matchMedia('(max-width: 860px)') : null;
 
 const clamp = (value, min, max) => (value < min ? min : value > max ? max : value);
 const CURVE_DENOM = Math.exp(CURVE) - 1;
@@ -514,6 +522,14 @@ function prepareCanvas(el, config, lineTop = 0) {
   const cw = W + pad.x * 2;
   const ch = H + pad.top + pad.bottom;
 
+  // An absolutely positioned canvas resolves against its nearest positioned
+  // ancestor, but the host only becomes one when `is-grain` lands - after the
+  // paint. Without this the canvas sits at the page origin for the frames the
+  // paint takes and then jumps into place, which is visible on any page without
+  // a curtain. Make the host a containing block before the canvas exists, while
+  // the real text is still there.
+  if (getComputedStyle(el).position === 'static') el.style.position = 'relative';
+
   let canvas = el.querySelector('.grain__c');
   if (!canvas) {
     canvas = document.createElement('canvas');
@@ -599,7 +615,10 @@ function measureConfig(el) {
   const baseline = (lineHeight - (ascent + descent)) / 2 + ascent;
 
   const scale = (document.documentElement.clientWidth * dpr) / REFERENCE_WIDTH;
-  const sigmas = SIGMAS.map((sigma) => sigma * (radius / 6) * scale);
+  const headingOnPhone = Boolean(mobile && mobile.matches && el.closest('h1, h2, h3'));
+  const sigmas = SIGMAS.map(
+    (sigma) => sigma * (radius / 6) * scale * BLUR_SCALE * (headingOnPhone ? MOBILE_HEADING_SCALE : 1),
+  );
 
   // room for the blur, plus whatever the glyphs reach past their line box
   // (a descender such as the comma in "FAR," starts below the 0.82 box)
@@ -785,10 +804,28 @@ export async function initGrainText(selector = '[data-grain]') {
     else otherElements.push(el);
   });
 
-  // Every block keeps the effect, on phones too. It is painted only when it is
-  // about to enter the viewport, off the idle queue, and the large canvases are
-  // split across frames, so the design is unchanged without spending the
-  // scroll budget on offscreen text.
+  // Anything already on screen is part of the first frame - the lab wordmark,
+  // the 404 heading. It is painted before the curtain lifts, so plain text
+  // never swaps to grain in front of the visitor.
+  const onScreen = [];
+  const below = [];
+  otherElements.forEach((el) => {
+    const rect = el.getBoundingClientRect();
+    (rect.bottom > 0 && rect.top < window.innerHeight ? onScreen : below).push(el);
+  });
+
+  for (const el of onScreen) {
+    try {
+      if (await renderElementAsync(el)) rendered.add(el);
+    } catch (error) {
+      console.error('[portfolio] grain', error);
+    }
+  }
+
+  // Every other block keeps the effect, on phones too. It is painted only when
+  // it is about to enter the viewport, off the idle queue, and the large
+  // canvases are split across frames, so the design is unchanged without
+  // spending the scroll budget on offscreen text.
   if (typeof IntersectionObserver === 'function') {
     observer = new IntersectionObserver(
       (entries) => {
@@ -810,9 +847,9 @@ export async function initGrainText(selector = '[data-grain]') {
       { rootMargin: '400px 0px' },
     );
 
-    otherElements.forEach((el) => observer.observe(el));
+    below.forEach((el) => observer.observe(el));
   } else {
-    otherElements.forEach((el) => {
+    below.forEach((el) => {
       try {
         if (renderElement(el)) rendered.add(el);
       } catch (error) {

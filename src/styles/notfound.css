@@ -1,0 +1,51 @@
+.notfound-page {
+  min-height: 100vh;
+  min-height: 100svh;
+}
+
+.notfound {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: flex-start;
+  width: 100%;
+  max-width: calc(1920 * var(--s));
+  min-height: 100vh;
+  min-height: 100svh;
+  margin-inline: auto;
+  padding: calc(170 * var(--s)) var(--pad) calc(100 * var(--s));
+}
+
+.notfound__label {
+  margin-bottom: calc(24 * var(--s));
+}
+
+.notfound__title {
+  max-width: 100%;
+  font-size: calc(200 * var(--s));
+  line-height: 0.86;
+}
+
+.notfound__desc {
+  max-width: calc(760 * var(--s));
+  margin-top: calc(40 * var(--s));
+  font-size: var(--body);
+  line-height: 1.25;
+  letter-spacing: -0.05em;
+}
+
+@media (max-width: 860px) {
+  .notfound {
+    padding-top: calc(190 * var(--s));
+    padding-bottom: calc(70 * var(--s));
+  }
+
+  .notfound__title {
+    font-size: calc(170 * var(--s));
+  }
+
+  .notfound__desc {
+    max-width: none;
+    margin-top: calc(30 * var(--s));
+  }
+}

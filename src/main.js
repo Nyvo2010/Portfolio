@@ -9,6 +9,8 @@ import { initLoader } from './components/loader.js';
 import { initClock } from './components/clock.js';
 import { initLinks } from './components/links.js';
 import { mountLists } from './components/rows.js';
+import { initLabHint } from './components/lab-hint.js';
+import { initPageTransition } from './components/page-transition.js';
 import { initHeader } from './components/header.js';
 import { initHero } from './components/hero.js';
 import { initMenu } from './components/menu.js';
@@ -16,9 +18,9 @@ import { fitText } from './lib/fit.js';
 import { initScale } from './lib/scale.js';
 import { lineReveals, softReveals, heroIntro, reduced } from './lib/reveal.js';
 import { initScrollBlur } from './lib/blur.js';
-import { initSmoothScroll } from './lib/scroll.js';
 import { splitLines, unsplit } from './lib/split.js';
 import { initGrainText, renderGrainText } from './lib/grain-text.js';
+import { initGrainImages } from './lib/grain-image.js';
 import { nextFrame } from './lib/env.js';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -114,7 +116,9 @@ function revealFallback() {
 
 async function boot() {
   safe('links', initLinks);
+  safe('page transition', initPageTransition);
   safe('lists', mountLists);
+  safe('lab hint', initLabHint);
   safe('clock', initClock);
   safe('menu', initMenu);
 
@@ -141,13 +145,14 @@ async function boot() {
     console.error('[portfolio] grain', error);
   }
 
+  safe('grain image', initGrainImages);
+
   // the hero plays as the curtain lifts, not after it has gone
   await initLoader(heroIntro);
 
   safe('header', initHeader);
   safe('hero', initHero);
   safe('scroll blur', initScrollBlur);
-  safe('smooth scroll', initSmoothScroll);
 
   ScrollTrigger.refresh();
 

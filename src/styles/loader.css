@@ -7,6 +7,12 @@
   background: var(--bg);
 }
 
+/* arriving from the homepage: the curtain already read 100%, so the lab opens
+   on a clean dark frame and simply lifts instead of repeating the number */
+[data-page-arrival] .loader__pct {
+  visibility: hidden;
+}
+
 .loader__pct {
   font-size: clamp(12px, 1.05vw, 15px);
   letter-spacing: -0.02em;

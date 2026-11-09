@@ -41,6 +41,10 @@
         letter-spacing: -0.02em;
         font-variant-numeric: tabular-nums;
       }
+      /* arriving from another page: the curtain already read 100% */
+      html[data-page-arrival] .loader__pct {
+        visibility: hidden;
+      }
     </style>
     <noscript>
       <style>
@@ -49,50 +53,90 @@
         }
       </style>
     </noscript>
-    <link
-      rel="icon"
-      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230c0c0c'/%3E%3Cpath d='M8 24V8h3l9 11V8h4v16h-3l-9-11v11z' fill='%23f3f3f3'/%3E%3C/svg%3E"
-    />
+    <link rel="icon" type="image/png" sizes="512x512" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/favicon.png" />
   </head>
   <body>
     <div class="loader" data-loader aria-hidden="true">
       <span class="loader__pct" data-loader-pct>0%</span>
     </div>
     <script>
-      /* the count starts from markup, so the curtain never sits at 0% while the
+      /* The count starts from markup, so the curtain never sits at 0% while the
          bundle is still parsing; the bundle only finishes it off.
+         The timings mirror LOAD in src/lib/motion.js (0.9s to 94%, then a 0.2s
+         tail to 100%), so both pages count on the same curve.
          The failsafe matters more than the count: an old browser that cannot
          parse the module, a blocked script or an early runtime error must never
          leave a fixed curtain over the whole page. */
       (function () {
+        var root = document.documentElement;
         var loader = document.querySelector('[data-loader]');
         var label = document.querySelector('[data-loader-pct]');
+        var arriving = false;
+
+        /* keep in sync with src/components/page-transition.js: the destination
+           marks itself before its first paint, so the curtain the previous page
+           raised is the first thing this document shows */
+        try {
+          arriving = sessionStorage.getItem('nyvo:page-arrival') === '1';
+        } catch (error) {}
+        if (arriving) root.setAttribute('data-page-arrival', '1');
+
         var value = 0;
         var done = false;
-        var timer = setInterval(function () {
-          value = Math.min(90, value + 3);
-          if (label) label.textContent = Math.round(value) + '%';
-          if (value >= 90) clearInterval(timer);
-        }, 70);
+        var raf = 0;
+
+        function draw(next) {
+          value = next;
+          if (label) label.textContent = Math.round(next) + '%';
+        }
+
+        function to(target, ms) {
+          if (raf) cancelAnimationFrame(raf);
+          var from = value;
+          var start = performance.now();
+          (function step(now) {
+            var t = Math.min(1, (now - start) / ms);
+            draw(from + (target - from) * (1 - Math.pow(1 - t, 3)));
+            if (t < 1) raf = requestAnimationFrame(step);
+            else raf = 0;
+          })(start);
+        }
 
         function dismiss() {
           if (done) return;
           done = true;
-          clearInterval(timer);
-          if (label) label.textContent = '100%';
+          if (raf) cancelAnimationFrame(raf);
+          draw(100);
           if (!loader || !loader.parentNode) return;
-          loader.style.transition = 'opacity 120ms linear';
+          loader.style.transition = 'opacity 140ms linear';
           loader.style.opacity = '0';
           setTimeout(function () {
             if (loader.parentNode) loader.parentNode.removeChild(loader);
-          }, 140);
+          }, 160);
         }
 
         window.__loaderFinish = function () {
-          clearInterval(timer);
-          if (label) label.textContent = '100%';
+          if (done) return;
+          if (value >= 99.5) {
+            draw(100);
+            return;
+          }
+          to(100, 200);
         };
         window.__loaderDismiss = dismiss;
+
+        if (arriving) {
+          draw(100);
+        } else {
+          var started = performance.now();
+          (function climb(now) {
+            var t = Math.min(1, (now - started) / 900);
+            draw((1 - Math.pow(1 - t, 3)) * 94);
+            if (t < 1) raf = requestAnimationFrame(climb);
+            else raf = 0;
+          })(started);
+        }
 
         /* the module normally removes it in well under a second */
         setTimeout(dismiss, 8000);
@@ -173,16 +217,40 @@
               in highschool.
             </p>
           </div>
-          <figure class="about__portrait" data-rise>
+          <figure class="about__portrait" data-rise data-grain-image="6">
             <img
-              src="/assets/portrait.png"
-              alt="Portrait of Niek Vogelaar sitting on stone steps"
-              width="950"
-              height="1174"
+              src="/assets/portrait.webp"
+              alt="Portrait of Nyvo"
+              width="1200"
+              height="1600"
               loading="lazy"
               decoding="async"
             />
           </figure>
+        </div>
+      </section>
+
+      <section class="section" id="lab">
+        <div class="frame lab-hint" data-blur>
+          <p class="micro lab-hint__label" data-rise>. Lab</p>
+          <div class="lab-hint__copy">
+            <p class="micro lab-hint__click" data-rise>(Click)</p>
+            <div class="rise lab-hint__title">
+              <a class="lab-hint__enter" href="/labs/">
+                <h2 class="display" data-split data-grain="6">Enter the lab</h2>
+              </a>
+            </div>
+            <p class="lab-hint__desc" data-rise>
+              All kinds of media from BTS or just random sh*t
+            </p>
+          </div>
+          <div
+            class="lab-hint__cluster"
+            data-lab-cluster
+            data-rise
+            role="group"
+            aria-label="Selected pieces from the lab"
+          ></div>
         </div>
       </section>
 

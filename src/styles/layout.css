@@ -16,6 +16,13 @@
   padding-top: var(--stack-gap);
 }
 
+/* the hero already carries bottom padding of its own, so the first section only
+   needs the rest of the shared gap to sit as far from the hero as the sections
+   sit from each other */
+.hero + .section {
+  padding-top: calc(var(--stack-gap) - 60 * var(--s));
+}
+
 [id] {
   scroll-margin-top: calc(160 * var(--s));
 }

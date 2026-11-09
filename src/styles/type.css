@@ -51,6 +51,9 @@
 
 .is-split .ln__i {
   display: block;
+  /* the grain canvas is absolute inside this line, so the line is the
+     containing block from the first paint, not only once `is-grain` lands */
+  position: relative;
 }
 
 /* ----------------------------------------------------------------

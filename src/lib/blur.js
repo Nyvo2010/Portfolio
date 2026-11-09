@@ -2,7 +2,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { reduced } from './reveal.js';
 
 /** Pixels of blur while a block is fully out of the reading zone. */
-const EDGE = 12;
+const EDGE = 10.2; // 85% of the previous 12px
 /** Share of the pass spent blurring in, and again blurring out. */
 const RAMP = 0.22;
 

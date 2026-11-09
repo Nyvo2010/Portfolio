@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>The Lab — Nyvo</title>
+    <meta
+      name="description"
+      content="An endless canvas of media, experiments and random pieces from the lab of Nyvo."
+    />
+    <meta name="theme-color" content="#0c0c0c" />
+    <meta property="og:title" content="The Lab — Nyvo" />
+    <meta
+      property="og:description"
+      content="An endless canvas of media, experiments and random pieces from the lab of Nyvo."
+    />
+    <meta property="og:type" content="website" />
+    <meta name="color-scheme" content="dark" />
+    <script>
+      /* Set before first paint so an arrival from another page never flashes
+         0% over the curtain that is already at 100%. Keep the key in sync with
+         src/components/page-transition.js. */
+      try {
+        if (sessionStorage.getItem('nyvo:page-arrival') === '1') {
+          document.documentElement.setAttribute('data-page-arrival', '1');
+        }
+      } catch (error) {}
+    </script>
+    <style>
+      html,
+      body {
+        margin: 0;
+        background: #0c0c0c;
+        color: #f3f3f3;
+        font-family: 'Inter Variable', 'Inter', system-ui, -apple-system, sans-serif;
+        font-weight: 500;
+      }
+      body {
+        overflow: hidden;
+      }
+      .loader {
+        position: fixed;
+        inset: 0;
+        z-index: 200;
+        display: grid;
+        place-items: center;
+        background: #0c0c0c;
+        font-size: 14px;
+        letter-spacing: -0.02em;
+        font-variant-numeric: tabular-nums;
+      }
+      /* hidden from the very first paint when this page follows the homepage
+         curtain, so the number never flashes back to 0% */
+      html[data-page-arrival] .loader__pct {
+        visibility: hidden;
+      }
+    </style>
+    <link rel="icon" type="image/png" sizes="512x512" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/favicon.png" />
+  </head>
+  <body class="labs-page">
+    <div class="loader" data-lab-loader aria-hidden="true">
+      <span class="loader__pct" data-lab-loader-count>0%</span>
+    </div>
+
+    <header class="header" data-header>
+      <div class="header__inner">
+        <a class="brand hbtn" href="/">N.</a>
+        <p class="header__loc">Netherlands<span class="loc__time" data-time>00:00</span></p>
+        <nav class="header__nav link-group" aria-label="Primary" data-nav></nav>
+        <div class="header__social link-group" data-social-list="header"></div>
+      </div>
+    </header>
+
+    <button
+      class="menu-toggle"
+      type="button"
+      data-menu-toggle
+      aria-expanded="false"
+      aria-controls="menu"
+      aria-label="Menu"
+    >
+      <span class="menu-toggle__bar" aria-hidden="true"></span>
+      <span class="menu-toggle__bar" aria-hidden="true"></span>
+    </button>
+
+    <div class="menu" id="menu" data-menu aria-hidden="true">
+      <a class="brand menu__brand" href="/">N.</a>
+      <nav class="menu__nav" aria-label="Menu" data-menu-nav></nav>
+      <div class="menu__foot">
+        <div class="menu__social link-group" data-menu-social></div>
+      </div>
+    </div>
+
+    <main class="lab" data-lab>
+      <h1 class="display lab__title" data-grain="8">The Lab</h1>
+      <div class="lab__field" data-lab-field></div>
+      <div class="lab__motion" aria-hidden="true"></div>
+    </main>
+
+    <div class="lab__hud" aria-hidden="true">
+      <p class="micro">. Lab</p>
+      <p class="micro lab__hud-hint">(Drag)</p>
+    </div>
+
+    <script type="module" src="/src/labs.js"></script>
+    <script>
+      /* If the module never boots, the curtain must not keep the canvas hidden.
+         Once the module has taken the curtain over (data-lab-booting), a slow
+         folder probe is not a failure: leave the cover up instead of revealing
+         a canvas that has not been built yet. */
+      setTimeout(function () {
+        var el = document.querySelector('[data-lab-loader]');
+        if (el && el.parentNode && !document.documentElement.hasAttribute('data-lab-booting')) {
+          el.parentNode.removeChild(el);
+        }
+      }, 8000);
+    </script>
+  </body>
+</html>
