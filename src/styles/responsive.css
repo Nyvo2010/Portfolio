@@ -77,6 +77,10 @@
     --span: 12;
   }
 
+  .row + .row {
+    margin-top: calc(14 * var(--s));
+  }
+
   .rows .row {
     grid-template-columns: minmax(0, 1fr) auto;
     column-gap: calc(14 * var(--s));

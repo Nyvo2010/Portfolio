@@ -81,6 +81,10 @@
   line-height: var(--row-lh);
 }
 
+.row + .row {
+  margin-top: calc(36 * var(--s));
+}
+
 .row > span {
   display: block;
 }
@@ -138,7 +142,9 @@
   width: max-content;
 }
 
-/* inverting highlight box, one line tall */
+/* inverting highlight box, one line tall. It sits above the floating media so
+   its difference blend also inverts the shots and logos it crosses, instead of
+   the media painting over it and hiding the highlight. */
 .rows__box {
   position: absolute;
   top: 0;
@@ -149,14 +155,16 @@
   mix-blend-mode: difference;
   opacity: 0;
   pointer-events: none;
-  z-index: 2;
+  z-index: 4;
 }
 
-/* floating media, centred on the list, magnetic towards the cursor */
+/* floating media, centred on the list itself: the centre of the columns the
+   rows occupy, so a list that starts after the hint columns does not centre its
+   image on the empty space beside it. Magnetic towards the cursor. */
 .rows__media {
   position: absolute;
   top: 50%;
-  left: 50%;
+  left: calc((100% + var(--gap)) / var(--cols) * (var(--skip) + var(--span) / 2) - var(--gap) / 2);
   z-index: 3;
   width: calc(470 * var(--s));
   aspect-ratio: 4 / 3;

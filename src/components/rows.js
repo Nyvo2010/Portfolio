@@ -87,11 +87,39 @@ function interact(root, items, kind, box, media) {
   const boxY = gsap.quickTo(box, 'y', { duration: DUR.slow, ease: EASE.out });
   const boxH = gsap.quickTo(box, 'height', { duration: DUR.slow, ease: EASE.out });
 
+  // the bar stands a little taller than the row it marks and stays centred on
+  // the line, so it reads as a highlight around the text, not a text box
+  const BOX_GROW = 1.18;
+  const boxRect = (row) => {
+    const rowRect = row.getBoundingClientRect();
+    const listRect = root.getBoundingClientRect();
+    const height = rowRect.height * BOX_GROW;
+    return { y: rowRect.top - listRect.top - (height - rowRect.height) / 2, height };
+  };
+
+  // the gaps between rows still belong to the list: inside the list the bar
+  // snaps to whichever row is closest, so crossing the space between two items
+  // slides the highlight along instead of blinking it out
+  const nearest = (clientY) => {
+    let best = -1;
+    let bestDistance = Infinity;
+    rows.forEach((row, index) => {
+      const rect = row.getBoundingClientRect();
+      const distance = Math.abs(clientY - (rect.top + rect.height / 2));
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        best = index;
+      }
+    });
+    return best;
+  };
+
   const hide = () => {
     if (!open) return;
     open = false;
     current = -1;
-    gsap.to(box, { opacity: 0, duration: DUR.fast, ease: EASE.in, overwrite: 'auto' });
+    // the highlight lingers on its way out: a fast fade read as a flicker
+    gsap.to(box, { opacity: 0, duration: DUR.slow, ease: EASE.in, overwrite: 'auto' });
     gsap.to(media, { opacity: 0, duration: DUR.fast, ease: EASE.in, overwrite: 'auto' });
   };
 
@@ -180,11 +208,10 @@ function interact(root, items, kind, box, media) {
 
     if (changed) {
       current = index;
-      const rowRect = row.getBoundingClientRect();
-      const listRect = root.getBoundingClientRect();
+      const { y, height } = boxRect(row);
 
-      boxY(rowRect.top - listRect.top);
-      boxH(rowRect.height);
+      boxY(y);
+      boxH(height);
       swapMedia(index);
     }
 
@@ -208,11 +235,7 @@ function interact(root, items, kind, box, media) {
   if (!coarse) {
     root.addEventListener('pointermove', (event) => {
       const row = event.target.closest('.row');
-      if (!row) {
-        hide();
-        return;
-      }
-      select(rows.indexOf(row), event);
+      select(row ? rows.indexOf(row) : nearest(event.clientY), event);
     }, { passive: true });
     root.addEventListener('pointerleave', hide);
     window.addEventListener('scroll', hide, { passive: true });
@@ -229,9 +252,8 @@ function interact(root, items, kind, box, media) {
 
   window.addEventListener('resize', () => {
     if (!open || current < 0) return;
-    const rowRect = rows[current].getBoundingClientRect();
-    const listRect = root.getBoundingClientRect();
-    gsap.set(box, { y: rowRect.top - listRect.top, height: rowRect.height });
+    const { y, height } = boxRect(rows[current]);
+    gsap.set(box, { y, height });
   });
 }
 
