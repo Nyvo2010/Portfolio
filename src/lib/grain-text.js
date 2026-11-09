@@ -24,7 +24,11 @@
 import { env, isFinePointer, prefersReducedMotion, nextFrame, whenIdle } from './env.js';
 
 export const SIGMAS = [0, 2, 4, 6, 8]; // blur levels @ 2576px reference
-const CURVE = 2.6; // exponential falloff: crisp through the middle, blur at the corners
+// Flat through the first share of the block, then a steep exponential rise.
+// RAMP_START moves where the blur begins, CURVE decides how hard it lands at
+// the edge; the two are independent.
+const CURVE = 4.2;
+const RAMP_START = 0.3;
 const DEAD = 0.03; // dead zone keeps the sharp corner properly sharp
 export const GRAIN = 2.7; // grain contrast (higher = harder grain)
 export const GRAIN_AMOUNT = 0.31; // 0 = no texture, 1 = full texture
@@ -37,11 +41,18 @@ export const BLUR_SCALE = 0.85;
 // stronger there than on the desktop line-by-line version. Headings keep 70%
 // of the blur at that width; the ramp, crossfade and grain stay untouched.
 const MOBILE_HEADING_SCALE = 0.7;
+// Refinements on the site-wide scale: display type keeps 80% of it, and the
+// about copy 60%, so the long paragraph reads clearest.
+const HEADING_SCALE = 0.8;
+const ABOUT_SCALE = 0.6;
 const mobile = typeof window.matchMedia === 'function' ? window.matchMedia('(max-width: 860px)') : null;
 
 const clamp = (value, min, max) => (value < min ? min : value > max ? max : value);
 const CURVE_DENOM = Math.exp(CURVE) - 1;
-const curve = (value) => (Math.exp(CURVE * value) - 1) / CURVE_DENOM;
+const curve = (value) => {
+  const t = clamp((value - RAMP_START) / (1 - RAMP_START), 0, 1);
+  return (Math.exp(CURVE * t) - 1) / CURVE_DENOM;
+};
 
 /* ---------- state shared by every canvas ---------- */
 
@@ -616,8 +627,19 @@ function measureConfig(el) {
 
   const scale = (document.documentElement.clientWidth * dpr) / REFERENCE_WIDTH;
   const headingOnPhone = Boolean(mobile && mobile.matches && el.closest('h1, h2, h3'));
+  const contextScale = el.closest('.about')
+    ? ABOUT_SCALE
+    : el.closest('.display')
+      ? HEADING_SCALE
+      : 1;
   const sigmas = SIGMAS.map(
-    (sigma) => sigma * (radius / 6) * scale * BLUR_SCALE * (headingOnPhone ? MOBILE_HEADING_SCALE : 1),
+    (sigma) =>
+      sigma *
+      (radius / 6) *
+      scale *
+      BLUR_SCALE *
+      contextScale *
+      (headingOnPhone ? MOBILE_HEADING_SCALE : 1),
   );
 
   // room for the blur, plus whatever the glyphs reach past their line box

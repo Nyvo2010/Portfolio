@@ -25,7 +25,9 @@ import {
 } from './grain-text.js';
 import { nextFrame, whenIdle } from './env.js';
 
-const CURVE = 2.6; // exponential falloff: crisp through the middle, blur at the corners
+// Same steep landing as the text curve; the picture keeps a slightly longer
+// flat middle (RAMP_START) so the subject stays in focus.
+const CURVE = 4.2;
 const DEAD = 0.03; // dead zone keeps the sharp corner properly sharp
 const CURVE_DENOM = Math.exp(CURVE) - 1;
 const RAMP_SPREAD = (1 / (1 - DEAD)) * 255;
