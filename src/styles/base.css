@@ -97,6 +97,7 @@ body {
   /* Figma renders the default variable instance, not Chrome's optical cut */
   font-optical-sizing: none;
   font-kerning: normal;
+  overflow-x: hidden;
   overflow-x: clip;
 }
 

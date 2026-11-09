@@ -42,6 +42,13 @@
         font-variant-numeric: tabular-nums;
       }
     </style>
+    <noscript>
+      <style>
+        [data-loader] {
+          display: none !important;
+        }
+      </style>
+    </noscript>
     <link
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230c0c0c'/%3E%3Cpath d='M8 24V8h3l9 11V8h4v16h-3l-9-11v11z' fill='%23f3f3f3'/%3E%3C/svg%3E"
@@ -53,19 +60,44 @@
     </div>
     <script>
       /* the count starts from markup, so the curtain never sits at 0% while the
-         bundle is still parsing; the bundle only finishes it off */
+         bundle is still parsing; the bundle only finishes it off.
+         The failsafe matters more than the count: an old browser that cannot
+         parse the module, a blocked script or an early runtime error must never
+         leave a fixed curtain over the whole page. */
       (function () {
+        var loader = document.querySelector('[data-loader]');
         var label = document.querySelector('[data-loader-pct]');
         var value = 0;
+        var done = false;
         var timer = setInterval(function () {
           value = Math.min(90, value + 3);
           if (label) label.textContent = Math.round(value) + '%';
           if (value >= 90) clearInterval(timer);
         }, 70);
+
+        function dismiss() {
+          if (done) return;
+          done = true;
+          clearInterval(timer);
+          if (label) label.textContent = '100%';
+          if (!loader || !loader.parentNode) return;
+          loader.style.transition = 'opacity 120ms linear';
+          loader.style.opacity = '0';
+          setTimeout(function () {
+            if (loader.parentNode) loader.parentNode.removeChild(loader);
+          }, 140);
+        }
+
         window.__loaderFinish = function () {
           clearInterval(timer);
           if (label) label.textContent = '100%';
         };
+        window.__loaderDismiss = dismiss;
+
+        /* the module normally removes it in well under a second */
+        setTimeout(dismiss, 8000);
+        window.addEventListener('error', dismiss);
+        window.addEventListener('unhandledrejection', dismiss);
       })();
     </script>
 

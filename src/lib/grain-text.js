@@ -21,6 +21,8 @@
  * sizing, wrapping and spacing stay exactly as the page laid them out.
  */
 
+import { env, isFinePointer, prefersReducedMotion, nextFrame, whenIdle } from './env.js';
+
 const SIGMAS = [0, 2, 4, 6, 8]; // blur levels @ 2576px reference
 const CURVE = 2.6; // exponential falloff: crisp through the middle, blur at the corners
 const DEAD = 0.03; // dead zone keeps the sharp corner properly sharp
@@ -69,16 +71,24 @@ const GRAIN_LUT = (() => {
 })();
 
 /* ---------- separable box blur x3 ~ gaussian ---------- */
+/* Integer box blur: the levels are stored as bytes anyway, so working in
+   Uint8Array avoids two float conversions per level and is roughly twice as
+   fast as the old Float32 version on the large display canvases. */
 function boxH(src, dst, w, h, r) {
   const inv = 1 / (2 * r + 1);
   for (let y = 0; y < h; y += 1) {
     const row = y * w;
     let acc = 0;
-    for (let k = -r; k <= r; k += 1) acc += src[row + Math.min(w - 1, Math.max(0, k))];
-    dst[row] = acc * inv;
+    for (let k = -r; k <= r; k += 1) {
+      const x = k < 0 ? 0 : k >= w ? w - 1 : k;
+      acc += src[row + x];
+    }
+    dst[row] = (acc * inv + 0.5) | 0;
     for (let x = 1; x < w; x += 1) {
-      acc += src[row + Math.min(w - 1, x + r)] - src[row + Math.max(0, x - r - 1)];
-      dst[row + x] = acc * inv;
+      const add = x + r < w ? x + r : w - 1;
+      const sub = x - r - 1 > 0 ? x - r - 1 : 0;
+      acc += src[row + add] - src[row + sub];
+      dst[row + x] = (acc * inv + 0.5) | 0;
     }
   }
 }
@@ -87,20 +97,25 @@ function boxV(src, dst, w, h, r) {
   const inv = 1 / (2 * r + 1);
   for (let x = 0; x < w; x += 1) {
     let acc = 0;
-    for (let k = -r; k <= r; k += 1) acc += src[Math.min(h - 1, Math.max(0, k)) * w + x];
-    dst[x] = acc * inv;
+    for (let k = -r; k <= r; k += 1) {
+      const y = k < 0 ? 0 : k >= h ? h - 1 : k;
+      acc += src[y * w + x];
+    }
+    dst[x] = (acc * inv + 0.5) | 0;
     for (let y = 1; y < h; y += 1) {
-      acc += src[Math.min(h - 1, y + r) * w + x] - src[Math.max(0, y - r - 1) * w + x];
-      dst[y * w + x] = acc * inv;
+      const add = y + r < h ? y + r : h - 1;
+      const sub = y - r - 1 > 0 ? y - r - 1 : 0;
+      acc += src[add * w + x] - src[sub * w + x];
+      dst[y * w + x] = (acc * inv + 0.5) | 0;
     }
   }
 }
 
 function blur(src, w, h, sigma) {
   const r = Math.round(sigma);
-  if (r < 1) return Float32Array.from(src);
-  const a = Float32Array.from(src);
-  const b = new Float32Array(src.length);
+  if (r < 1) return src.slice();
+  let a = src.slice();
+  const b = new Uint8Array(src.length);
   for (let i = 0; i < 3; i += 1) {
     boxH(a, b, w, h, r);
     boxV(b, a, w, h, r);
@@ -108,17 +123,107 @@ function blur(src, w, h, sigma) {
   return a;
 }
 
+/**
+ * The blur levels are smooth by definition, so they are computed at half
+ * resolution and expanded again. That quarters the most expensive pass while
+ * the crisp base level and the grain stay at full resolution.
+ */
+function downsampleInto(src, w, h, dw, dh, out, yStart, yEnd) {
+  // Two horizontally adjacent source bytes can be read as one 16-bit word.
+  const src16 = (src.byteOffset & 1) === 0 ? new Uint16Array(src.buffer, src.byteOffset, src.length >> 1) : null;
+  const fast = Boolean(src16) && (w & 1) === 0;
+
+  for (let y = yStart; y < yEnd; y += 1) {
+    const sy = y * 2;
+    const sy2 = sy + 1 < h ? sy + 1 : sy;
+    const row = y * dw;
+    const rowA = sy * w;
+    const rowB = sy2 * w;
+
+    if (fast) {
+      const rowA16 = rowA >> 1;
+      const rowB16 = rowB >> 1;
+      for (let x = 0; x < dw; x += 1) {
+        const a = src16[rowA16 + x];
+        const b = src16[rowB16 + x];
+        out[row + x] = ((a & 255) + (a >> 8) + (b & 255) + (b >> 8)) >> 2;
+      }
+    } else {
+      for (let x = 0; x < dw; x += 1) {
+        const sx = x * 2;
+        const sx2 = sx + 1 < w ? sx + 1 : sx;
+        out[row + x] =
+          (src[rowA + sx] + src[rowA + sx2] + src[rowB + sx] + src[rowB + sx2]) >> 2;
+      }
+    }
+  }
+}
+
+function downsample(src, w, h, dw, dh) {
+  const out = new Uint8Array(dw * dh);
+  downsampleInto(src, w, h, dw, dh, out, 0, dh);
+  return out;
+}
+
+function upsampleInto(src, sw, sh, w, h, out, yStart, yEnd) {
+  // Walk the small buffer and write 2x2 blocks; this is four times fewer
+  // iterations than walking the full-resolution output. When a row is a whole
+  // number of 32-bit words, two source pixels expand into one word, so the
+  // inner loop halves again and needs no bounds checks.
+  if ((w & 3) === 0 && (out.byteOffset & 3) === 0) {
+    const out32 = new Uint32Array(out.buffer, out.byteOffset, out.length >> 2);
+    const words = w >> 2;
+
+    for (let y = yStart; y < yEnd; y += 1) {
+      const dy = y * 2;
+      const row0 = dy * words;
+      const row1 = dy + 1 < h ? row0 + words : -1;
+      const srcRow = y * sw;
+
+      for (let x = 0; x < words; x += 1) {
+        const i = srcRow + x * 2;
+        const v0 = src[i];
+        const v1 = src[i + 1];
+        const word = v0 | (v0 << 8) | (v1 << 16) | (v1 << 24);
+        out32[row0 + x] = word;
+        if (row1 >= 0) out32[row1 + x] = word;
+      }
+    }
+    return;
+  }
+
+  for (let y = yStart; y < yEnd; y += 1) {
+    const dy = y * 2;
+    const srcRow = y * sw;
+    const row0 = dy * w;
+    const row1 = dy + 1 < h ? row0 + w : -1;
+    for (let x = 0; x < sw; x += 1) {
+      const value = src[srcRow + x];
+      const dx = x * 2;
+      out[row0 + dx] = value;
+      if (dx + 1 < w) out[row0 + dx + 1] = value;
+      if (row1 >= 0) {
+        out[row1 + dx] = value;
+        if (dx + 1 < w) out[row1 + dx + 1] = value;
+      }
+    }
+  }
+}
+
+function upsample(src, sw, sh, w, h) {
+  const out = new Uint8Array(w * h);
+  upsampleInto(src, sw, sh, w, h, out, 0, sh);
+  return out;
+}
+
 const scratch = () => document.createElement('canvas').getContext('2d');
 let trackingSupport = null;
-const supportsTracking = () => (trackingSupport ??= 'letterSpacing' in scratch());
+const supportsTracking = () => {
+  if (trackingSupport === null) trackingSupport = 'letterSpacing' in scratch();
+  return trackingSupport;
+};
 
 let measureCtx = null;
-
-const toBytes = (source) => {
-  const out = new Uint8Array(source.length);
-  for (let i = 0; i < source.length; i += 1) out[i] = (clamp(source[i], 0, 1) * 255 + 0.5) | 0;
-  return out;
-};
 
 /**
  * Two normalised blur ramps, 0..255 per pixel, exponential rather than linear:
@@ -126,10 +231,7 @@ const toBytes = (source) => {
  * of the blur. `near` reaches into the bottom-right, `far` is its point mirror
  * into the top-left.
  */
-function buildRamp(cw, ch, pad, W, linePx, blockPx) {
-  const count = cw * ch;
-  const near = new Uint8Array(count);
-  const far = new Uint8Array(count);
+function rampColumns(cw, pad, W) {
   const columns = new Float32Array(cw);
   const columnsFar = new Float32Array(cw);
 
@@ -139,20 +241,38 @@ function buildRamp(cw, ch, pad, W, linePx, blockPx) {
     columnsFar[px] = 0.65 * curve(1 - u);
   }
 
-  const spread = (1 / (1 - DEAD)) * 255;
-  const encode = (t) => (t <= DEAD ? 0 : Math.min(255, ((t - DEAD) * spread) | 0));
+  return { columns, columnsFar };
+}
 
-  for (let py = 0; py < ch; py += 1) {
+function buildRampRows(columns, columnsFar, near, far, cw, pad, linePx, blockPx, yStart, yEnd) {
+  const spread = (1 / (1 - DEAD)) * 255;
+
+  for (let py = yStart; py < yEnd; py += 1) {
     const v = clamp((linePx + (py - pad.top)) / blockPx, 0, 1);
     const down = 0.35 * curve(v);
     const downFar = 0.35 * curve(1 - v);
     const row = py * cw;
     for (let px = 0; px < cw; px += 1) {
-      near[row + px] = encode(columns[px] + down);
-      far[row + px] = encode(columnsFar[px] + downFar);
+      // Inlined encode: two function calls per pixel were a measurable share
+      // of the block paint on a throttled phone.
+      const tn = columns[px] + down;
+      const vn = tn <= DEAD ? 0 : (tn - DEAD) * spread;
+      near[row + px] = vn > 255 ? 255 : vn | 0;
+
+      const tf = columnsFar[px] + downFar;
+      const vf = tf <= DEAD ? 0 : (tf - DEAD) * spread;
+      far[row + px] = vf > 255 ? 255 : vf | 0;
     }
   }
+}
 
+function buildRamp(cw, ch, pad, W, linePx, blockPx) {
+  const count = cw * ch;
+  const near = new Uint8Array(count);
+  const far = new Uint8Array(count);
+
+  const { columns, columnsFar } = rampColumns(cw, pad, W);
+  buildRampRows(columns, columnsFar, near, far, cw, pad, linePx, blockPx, 0, ch);
   return { near, far };
 }
 
@@ -178,8 +298,8 @@ const mixLut = new Float32Array(256);
  * pixel (integer only), and the resulting 0..255 field drives the same
  * run-based blend as the static effect.
  */
-function paint(ctx, cache) {
-  const { levels, near, far, noise, image, pixels, count } = cache;
+function paintRows(cache, start, end) {
+  const { levels, near, far, noise, pixels } = cache;
   const top = levels.length - 1;
   const px = clamp(pointerX, 0, 1);
   const py = clamp(pointerY, 0, 1);
@@ -205,7 +325,7 @@ function paint(ctx, cache) {
   let inv = 1;
   let prev = -1;
 
-  for (let i = 0; i < count; i += 1) {
+  for (let i = start; i < end; i += 1) {
     const toNear = (near[i] * toNearWeight) >> 8;
     const toFar = (far[i] * toFarWeight) >> 8;
     const q = toNear > toFar ? toNear : toFar;
@@ -221,8 +341,11 @@ function paint(ctx, cache) {
     const alpha = (aFrom[i] * inv + aTo[i] * k) | 0;
     pixels[i] = GRAIN_LUT[(alpha << 8) | noise[i]];
   }
+}
 
-  ctx.putImageData(image, 0, 0);
+function paint(ctx, cache) {
+  paintRows(cache, 0, cache.count);
+  ctx.putImageData(cache.image, 0, 0);
 }
 
 /**
@@ -235,18 +358,25 @@ function paint(ctx, cache) {
 function finish(ctx, { cw, ch, pad, W, sigmas, linePx, blockPx }) {
   const count = cw * ch;
   const data = ctx.getImageData(0, 0, cw, ch).data;
-  const alpha = new Float32Array(count);
-  for (let i = 0; i < count; i += 1) alpha[i] = data[i * 4 + 3] / 255;
+  const base = new Uint8Array(count);
+  for (let i = 0; i < count; i += 1) base[i] = data[i * 4 + 3];
 
   const levels = new Array(sigmas.length);
-  levels[0] = toBytes(alpha);
+  levels[0] = base;
+
+  const hw = Math.max(1, (cw + 1) >> 1);
+  const hh = Math.max(1, (ch + 1) >> 1);
+  const small = downsample(base, cw, ch, hw, hh);
+
   for (let i = 1; i < sigmas.length; i += 1) {
-    levels[i] = toBytes(blur(alpha, cw, ch, Math.max(0.6, sigmas[i])));
+    const blurred = blur(small, hw, hh, Math.max(0.6, sigmas[i] * 0.5));
+    levels[i] = upsample(blurred, hw, hh, cw, ch);
   }
 
   const image = new ImageData(cw, ch);
   const ramps = buildRamp(cw, ch, pad, W, linePx, blockPx);
   const cache = {
+    ctx,
     levels,
     near: ramps.near,
     far: ramps.far,
@@ -261,8 +391,89 @@ function finish(ctx, { cw, ch, pad, W, sigmas, linePx, blockPx }) {
   paint(ctx, cache);
 }
 
+/**
+ * The same result as `finish`, but the expensive row loops are split across
+ * frames. A whole unsplit paragraph on a phone is one large canvas; doing the
+ * downsample, every blur level, the ramp and the blend in one task was the
+ * 1.5s block on a throttled device. The output is byte-for-byte the same.
+ */
+const CHUNK_PIXELS = 150000;
+const ASYNC_MIN_PIXELS = 250000;
+
+async function finishAsync(ctx, { cw, ch, pad, W, sigmas, linePx, blockPx }) {
+  const count = cw * ch;
+  const data = ctx.getImageData(0, 0, cw, ch).data;
+  const base = new Uint8Array(count);
+  for (let i = 0; i < count; i += 1) base[i] = data[i * 4 + 3];
+
+  const hw = Math.max(1, (cw + 1) >> 1);
+  const hh = Math.max(1, (ch + 1) >> 1);
+  const rows = Math.max(1, Math.floor(CHUNK_PIXELS / Math.max(1, cw)));
+
+  const small = new Uint8Array(hw * hh);
+  await nextFrame();
+  for (let y = 0; y < hh; y += rows) {
+    downsampleInto(base, cw, ch, hw, hh, small, y, Math.min(hh, y + rows));
+    await nextFrame();
+  }
+
+  // The blur passes are already at half resolution; they are cheap enough to
+  // run one level per frame instead of chunking them further.
+  const blurredLevels = new Array(sigmas.length);
+  for (let i = 1; i < sigmas.length; i += 1) {
+    blurredLevels[i] = blur(small, hw, hh, Math.max(0.6, sigmas[i] * 0.5));
+    if (i < sigmas.length - 1) await nextFrame();
+  }
+
+  const levels = new Array(sigmas.length);
+  levels[0] = base;
+  for (let i = 1; i < sigmas.length; i += 1) levels[i] = new Uint8Array(count);
+
+  const image = new ImageData(cw, ch);
+  const near = new Uint8Array(count);
+  const far = new Uint8Array(count);
+  const { columns, columnsFar } = rampColumns(cw, pad, W);
+  const cache = {
+    ctx,
+    levels,
+    near,
+    far,
+    noise: buildNoise(count),
+    image,
+    pixels: new Uint32Array(image.data.buffer),
+    count,
+  };
+
+  caches.set(ctx.canvas, cache);
+  live.add(ctx.canvas);
+
+  // One small-buffer row feeds two output rows. Expanding every level, building
+  // the ramp and blending the same band in one pass keeps the number of frames
+  // low while every task stays bounded.
+  const rowsSmall = Math.max(1, Math.floor(CHUNK_PIXELS / Math.max(1, cw * 2)));
+  for (let sy = 0; sy < hh; sy += rowsSmall) {
+    const ey = Math.min(hh, sy + rowsSmall);
+    const y0 = sy * 2;
+    const y1 = Math.min(ch, ey * 2);
+
+    for (let i = 1; i < sigmas.length; i += 1) {
+      upsampleInto(blurredLevels[i], hw, hh, cw, ch, levels[i], sy, ey);
+    }
+    buildRampRows(columns, columnsFar, near, far, cw, pad, linePx, blockPx, y0, y1);
+    paintRows(cache, y0 * cw, y1 * cw);
+    await nextFrame();
+  }
+
+  ctx.putImageData(image, 0, 0);
+}
+
+async function finishMaybeAsync(ctx, spec) {
+  if (spec.cw * spec.ch >= ASYNC_MIN_PIXELS) await finishAsync(ctx, spec);
+  else finish(ctx, spec);
+}
+
 /** Draws one line into its own canvas and paints the effect over it. */
-function paintLine(node, { words, width, lineHeight, baseline, blockHeight, lineTop, config }) {
+function prepareLine(node, { words, width, lineHeight, baseline, blockHeight, lineTop, config }) {
   const { font, tracking, gap, indent, dpr, sigmas, pad } = config;
 
   const W = Math.max(1, Math.round(width * dpr));
@@ -303,7 +514,17 @@ function paintLine(node, { words, width, lineHeight, baseline, blockHeight, line
     x += mctx.measureText(word).width + gap;
   });
 
-  finish(ctx, { cw, ch, pad, W, sigmas, linePx: lineTop * dpr, blockPx: blockHeight * dpr });
+  return { ctx, cw, ch, pad, W, sigmas, linePx: lineTop * dpr, blockPx: blockHeight * dpr };
+}
+
+function paintLine(node, spec) {
+  const prep = prepareLine(node, spec);
+  finish(prep.ctx, prep);
+}
+
+async function paintLineAsync(node, spec) {
+  const prep = prepareLine(node, spec);
+  await finishMaybeAsync(prep.ctx, prep);
 }
 
 /**
@@ -311,16 +532,20 @@ function paintLine(node, { words, width, lineHeight, baseline, blockHeight, line
  * rects, so the canvas follows the browser's own line breaking and spacing
  * instead of the DOM being cut into one element per line.
  */
-function paintBlock(el, config) {
+function prepareBlock(el, config) {
   const { width, lineHeight, baseline, font, tracking, uppercase, dpr, sigmas, pad } = config;
 
   const node = [...el.childNodes].find((child) => child.nodeType === 3 && child.textContent.trim());
-  if (!node) return false;
+  if (!node) return null;
 
   const base = el.getBoundingClientRect();
   const words = [];
+  const wordPattern = /\S+/g;
+  let match;
 
-  for (const match of node.textContent.matchAll(/\S+/g)) {
+  // `String.prototype.matchAll` is Safari 13+; an exec loop keeps older
+  // webviews from throwing during the very first paint.
+  while ((match = wordPattern.exec(node.textContent))) {
     const range = document.createRange();
     range.setStart(node, match.index);
     range.setEnd(node, match.index + match[0].length);
@@ -329,7 +554,7 @@ function paintBlock(el, config) {
     words.push({ text: match[0], x: rect.left - base.left, top: Math.round(rect.top) });
   }
 
-  if (!words.length) return false;
+  if (!words.length) return null;
 
   const lines = [...new Set(words.map((word) => word.top))].sort((a, b) => a - b);
   const lineOf = new Map(lines.map((top, i) => [top, i]));
@@ -371,7 +596,24 @@ function paintBlock(el, config) {
     );
   });
 
-  finish(ctx, { cw, ch, pad, W, sigmas, linePx: 0, blockPx: blockHeight * dpr });
+  return { ctx, cw, ch, pad, W, sigmas, linePx: 0, blockPx: blockHeight * dpr };
+}
+
+function paintBlock(el, config) {
+  const prep = prepareBlock(el, config);
+  if (!prep) return false;
+  finish(prep.ctx, prep);
+  el.classList.add('is-grain', 'is-grain--block');
+  return true;
+}
+
+async function paintBlockAsync(el, config) {
+  const prep = prepareBlock(el, config);
+  if (!prep) return false;
+
+  // Small blocks finish in one go; only a canvas big enough to become a long
+  // task pays for the extra frames.
+  await finishMaybeAsync(prep.ctx, prep);
 
   el.classList.add('is-grain', 'is-grain--block');
   return true;
@@ -391,6 +633,10 @@ function measureConfig(el) {
   const justified = style.textAlign === 'justify';
   const indent = parseFloat(style.textIndent) || 0;
   const radius = parseFloat(el.dataset.grain) || 6;
+
+  // The canvas is the visible text, so this keeps the original 2x cap. The
+  // heavy work is chunked and the blur is computed at half resolution instead
+  // of lowering the resolution of the type itself.
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
   if (!measureCtx) measureCtx = scratch();
@@ -470,6 +716,64 @@ function renderElement(el) {
   return true;
 }
 
+/**
+ * The same paint as `renderElement`, but it yields a frame between lines. The
+ * hero uses this so a low-power device can still animate the loader counter
+ * while the canvases are being prepared.
+ */
+async function renderElementAsync(el) {
+  const nodes = [...el.querySelectorAll('.ln__i')];
+  const config = measureConfig(el);
+  if (!config) return false;
+
+  if (!nodes.length) return paintBlockAsync(el, config);
+
+  const {
+    width,
+    lineHeight,
+    baseline,
+    font,
+    tracking,
+    uppercase,
+    justified,
+    indent,
+    space,
+    dpr,
+    sigmas,
+    pad,
+  } = config;
+  const blockHeight = nodes.length * lineHeight;
+
+  for (let i = 0; i < nodes.length; i += 1) {
+    const node = nodes[i];
+    const raw = node.textContent;
+    const words = (uppercase ? raw.toUpperCase() : raw).split(/\s+/).filter(Boolean);
+
+    if (words.length) {
+      const lead = i === 0 ? indent : 0;
+      const sum = words.reduce((total, word) => total + measureCtx.measureText(word).width, 0);
+      const isLast = i === nodes.length - 1;
+      const gap =
+        justified && !isLast && words.length > 1 ? (width - lead - sum) / (words.length - 1) : space;
+
+      await paintLineAsync(node, {
+        words,
+        width,
+        lineHeight,
+        baseline,
+        blockHeight,
+        lineTop: i * lineHeight,
+        config: { font, tracking, gap, indent: lead, dpr, sigmas, pad },
+      });
+    }
+
+    if (i < nodes.length - 1) await nextFrame();
+  }
+
+  el.classList.add('is-grain');
+  return true;
+}
+
 /* ---------- pointer-driven blur ---------- */
 
 /** Canvases on (or just off) screen, in paint order. */
@@ -492,17 +796,25 @@ function visibleItems() {
 }
 
 const HOVER_FINE = '(hover: hover) and (pointer: fine)';
-const REDUCED = '(prefers-reduced-motion: reduce)';
 
-// a large hero is several megapixels of blending; a hard budget per frame keeps
+// A large hero is several megapixels of blending; a hard budget per frame keeps
 // the effect from ever becoming the reason the page drops a frame. Canvases are
 // picked up by the next frame, so the whole block still lands on the target.
-const FRAME_BUDGET = 8;
+const FRAME_BUDGET = env().weak ? 4 : 8;
 
 let queue = null;
+let scrollingUntil = 0;
+let scrollTimer = 0;
 
 function tick() {
   rafId = 0;
+
+  // While the page is scrolling the cursor is not the thing being read. Give
+  // the frame back to the scroll and repaint once it settles.
+  if (performance.now() < scrollingUntil) {
+    queue = null;
+    return;
+  }
 
   const dx = targetX - pointerX;
   const dy = targetY - pointerY;
@@ -524,7 +836,7 @@ function tick() {
   const start = performance.now();
   while (queue.length && performance.now() - start < FRAME_BUDGET) {
     const { canvas, cache } = queue.shift();
-    if (canvas.isConnected) paint(canvas.getContext('2d', { willReadFrequently: true }), cache);
+    if (canvas.isConnected) paint(cache.ctx, cache);
   }
   if (!queue.length) queue = null;
 
@@ -536,7 +848,24 @@ function onPointerMove(event) {
   // relative to the screen, not the block: left/top are 0, right/bottom are 1
   targetX = clamp(event.clientX / window.innerWidth, 0, 1);
   targetY = clamp(event.clientY / window.innerHeight, 0, 1);
+  if (performance.now() < scrollingUntil) return;
   if (!rafId) rafId = requestAnimationFrame(tick);
+}
+
+function onScroll() {
+  scrollingUntil = performance.now() + 140;
+  if (scrollTimer) clearTimeout(scrollTimer);
+  scrollTimer = setTimeout(() => {
+    scrollTimer = 0;
+    if (rafId) return;
+    if (
+      Math.abs(targetX - pointerX) > 0.0015 ||
+      Math.abs(targetY - pointerY) > 0.0015 ||
+      queue
+    ) {
+      rafId = requestAnimationFrame(tick);
+    }
+  }, 150);
 }
 
 let pointerBound = false;
@@ -545,40 +874,91 @@ const rendered = new Set();
 let observer = null;
 
 /** Renders the hero at once, everything else shortly before it scrolls in. */
-export function initGrainText(selector = '[data-grain]') {
+export async function initGrainText(selector = '[data-grain]') {
   const elements = [...document.querySelectorAll(selector)];
   if (!elements.length) return;
 
+  // Without canvas letter-spacing the painted text would not match the DOM's
+  // tracking and could clip at the line edge. Plain, crisp text is the better
+  // fallback on those browsers.
+  if (!supportsTracking()) return;
+
   if (observer) observer.disconnect();
-  observer = new IntersectionObserver(
-    (entries) => {
-      entries.forEach((entry) => {
-        if (!entry.isIntersecting) return;
-        observer.unobserve(entry.target);
-        if (renderElement(entry.target)) rendered.add(entry.target);
-      });
-    },
-    { rootMargin: '600px 0px' },
-  );
+
+  const heroElements = [];
+  const otherElements = [];
 
   elements.forEach((el) => {
-    if (el.closest('.hero')) {
-      if (renderElement(el)) rendered.add(el);
-    } else {
-      observer.observe(el);
-    }
+    if (el.closest('.hero')) heroElements.push(el);
+    else otherElements.push(el);
   });
 
-  if (!pointerBound && !window.matchMedia(REDUCED).matches && window.matchMedia(HOVER_FINE).matches) {
+  // Every block keeps the effect, on phones too. It is painted only when it is
+  // about to enter the viewport, off the idle queue, and the large canvases are
+  // split across frames, so the design is unchanged without spending the
+  // scroll budget on offscreen text.
+  if (typeof IntersectionObserver === 'function') {
+    observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          observer.unobserve(entry.target);
+          // Deferred so a block entering during a scroll never blocks the
+          // scroll itself. Lines are painted across frames for the same
+          // reason: a 15-line paragraph must not become one 200ms task.
+          whenIdle(async () => {
+            try {
+              if (await renderElementAsync(entry.target)) rendered.add(entry.target);
+            } catch (error) {
+              console.error('[portfolio] grain', error);
+            }
+          }, 500);
+        });
+      },
+      { rootMargin: '400px 0px' },
+    );
+
+    otherElements.forEach((el) => observer.observe(el));
+  } else {
+    otherElements.forEach((el) => {
+      try {
+        if (renderElement(el)) rendered.add(el);
+      } catch (error) {
+        console.error('[portfolio] grain', error);
+      }
+    });
+  }
+
+  // The hero is painted before the curtain lifts, one line per frame, so the
+  // loader never freezes behind a single long canvas task.
+  for (const el of heroElements) {
+    try {
+      if (await renderElementAsync(el)) rendered.add(el);
+    } catch (error) {
+      console.error('[portfolio] grain', error);
+    }
+  }
+
+  if (
+    !pointerBound &&
+    !prefersReducedMotion() &&
+    isFinePointer() &&
+    window.matchMedia(HOVER_FINE).matches
+  ) {
     pointerBound = true;
     window.addEventListener('pointermove', onPointerMove, { passive: true });
+    window.addEventListener('scroll', onScroll, { passive: true });
   }
 }
 
 /** Re-renders the elements that already have a canvas (the DOM was re-split). */
 export function renderGrainText() {
   rendered.forEach((el) => {
-    if (renderElement(el)) return;
+    try {
+      if (renderElement(el)) return;
+    } catch (error) {
+      console.error('[portfolio] grain', error);
+    }
     // the canvas is the only visible text once is-grain is set: a block that
     // cannot be painted has to fall back to plain text instead of staying
     // transparent until the page is reloaded

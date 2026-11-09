@@ -1,9 +1,15 @@
 /** Publishes the layout width so --s maps 1:1 to the 1920 Figma frame. */
 export function initScale() {
   const root = document.documentElement;
+  let last = -1;
 
   const apply = () => {
-    root.style.setProperty('--vw', `${root.clientWidth}px`);
+    const width = root.clientWidth;
+    // A phone's URL bar fires resize without changing the width. Writing the
+    // same custom property again invalidates layout for no reason.
+    if (width === last) return;
+    last = width;
+    root.style.setProperty('--vw', `${width}px`);
   };
 
   apply();

@@ -1,4 +1,5 @@
 import { site } from '../data.js';
+import { replaceChildren } from '../lib/env.js';
 
 const attrs = (href) =>
   href.startsWith('http') ? ' target="_blank" rel="noopener noreferrer"' : '';
@@ -23,8 +24,9 @@ export function initLinks() {
     node.innerHTML = render(items);
   });
 
-  document.querySelector('[data-menu-nav]')?.replaceChildren(
-    ...site.nav.map((item) => {
+  replaceChildren(
+    document.querySelector('[data-menu-nav]'),
+    site.nav.map((item) => {
       const link = document.createElement('a');
       link.className = 'hbtn';
       link.href = item.href;
@@ -33,8 +35,9 @@ export function initLinks() {
     }),
   );
 
-  document.querySelector('[data-menu-social]')?.replaceChildren(
-    ...site.socials.map((item) => {
+  replaceChildren(
+    document.querySelector('[data-menu-social]'),
+    site.socials.map((item) => {
       const link = document.createElement('a');
       link.className = 'hbtn';
       link.href = item.href;

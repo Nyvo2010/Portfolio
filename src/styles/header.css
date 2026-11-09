@@ -5,7 +5,6 @@
   padding-top: calc(28 * var(--s));
   padding-inline: var(--pad);
   mix-blend-mode: difference;
-  will-change: transform;
 }
 
 .header__inner {

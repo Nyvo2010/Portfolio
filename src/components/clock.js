@@ -35,6 +35,7 @@ export function initClock() {
   if (!times.length && !statuses.length) return;
 
   const update = () => {
+    if (document.hidden) return;
     const now = new Date();
     const time = timeFormat.format(now);
     const status = statusFor(now);

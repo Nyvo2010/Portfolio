@@ -51,7 +51,6 @@
 
 .is-split .ln__i {
   display: block;
-  will-change: transform, opacity;
 }
 
 /* ----------------------------------------------------------------

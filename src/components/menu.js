@@ -1,5 +1,6 @@
 import { gsap } from 'gsap';
 import { DUR, EASE, forTravel } from '../lib/motion.js';
+import { onMediaChange } from '../lib/env.js';
 
 /** Full screen menu for touch and small screens. */
 export function initMenu() {
@@ -12,6 +13,13 @@ export function initMenu() {
   let open = false;
   let busy = false;
 
+  // Locking both boxes keeps iOS from scrolling the page behind the overlay.
+  const lockPage = (locked) => {
+    document.documentElement.style.overflow = locked ? 'hidden' : '';
+    document.body.style.overflow = locked ? 'hidden' : '';
+    document.body.style.touchAction = locked ? 'none' : '';
+  };
+
   const timeline = gsap.timeline({
     paused: true,
     onStart: () => {
@@ -19,14 +27,14 @@ export function initMenu() {
       root.setAttribute('aria-hidden', 'false');
       toggle.setAttribute('aria-expanded', 'true');
       toggle.setAttribute('aria-label', 'Close menu');
-      document.documentElement.style.overflow = 'hidden';
+      lockPage(true);
     },
     onReverseComplete: () => {
       busy = false;
       root.setAttribute('aria-hidden', 'true');
       toggle.setAttribute('aria-expanded', 'false');
       toggle.setAttribute('aria-label', 'Menu');
-      document.documentElement.style.overflow = '';
+      lockPage(false);
     },
     onComplete: () => {
       busy = false;
@@ -60,7 +68,7 @@ export function initMenu() {
     if (event.key === 'Escape' && open) setState(false);
   });
 
-  window.matchMedia('(min-width: 861px)').addEventListener('change', (event) => {
+  onMediaChange('(min-width: 861px)', (event) => {
     if (event.matches && open) {
       timeline.progress(0).pause();
       open = false;
@@ -68,7 +76,7 @@ export function initMenu() {
       root.setAttribute('aria-hidden', 'true');
       toggle.setAttribute('aria-expanded', 'false');
       toggle.setAttribute('aria-label', 'Menu');
-      document.documentElement.style.overflow = '';
+      lockPage(false);
     }
   });
 }

@@ -27,7 +27,9 @@ export function fitText(el, { limit = el.parentElement, reserve = 0, min = 14 } 
   if (!fits(ideal)) {
     let lo = min;
     let hi = ideal;
-    for (let i = 0; i < 16; i += 1) {
+    // 10 steps resolve to ~0.13px on a 130px display face, which is below
+    // anything the eye can see, and halves the forced layout reads.
+    for (let i = 0; i < 10; i += 1) {
       const mid = (lo + hi) / 2;
       if (fits(mid)) lo = mid;
       else hi = mid;

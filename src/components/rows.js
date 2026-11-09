@@ -10,6 +10,7 @@ import {
 } from 'simple-icons';
 import { vsCodePath } from '../lib/icons.js';
 import { DUR, EASE } from '../lib/motion.js';
+import { env, whenIdle } from '../lib/env.js';
 import { projects, stack } from '../data.js';
 
 const ICONS = {
@@ -235,11 +236,19 @@ function interact(root, items, kind, box, media) {
 }
 
 export function mountLists() {
-  projects.forEach((item) => {
-    if (!item.image) return;
-    const image = new Image();
-    image.src = item.image;
-  });
+  // Preload the hover shots once the page is idle, not during boot: on a slow
+  // connection they used to compete with the font and the portrait, and the
+  // loader waited for all of them. Metered connections load on demand.
+  if (!env().slowNetwork) {
+    whenIdle(() => {
+      projects.forEach((item) => {
+        if (!item.image) return;
+        const image = new Image();
+        image.decoding = 'async';
+        image.src = item.image;
+      });
+    }, 2500);
+  }
 
   document.querySelectorAll('[data-rows]').forEach((root) => {
     const kind = root.dataset.rows === 'stack' ? 'stack' : 'projects';
