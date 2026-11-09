@@ -15,10 +15,10 @@
  * as the cursor moves right or down and the top-left rises to meet it. Neither
  * corner ever exceeds the static amount.
  *
- * Layout is the spec's: word widths come from the canvas measure of the same
- * font, justified lines spread their gaps to the full width, the last line
- * keeps natural spacing. The real element keeps its text (transparent), so
- * sizing, wrapping and spacing stay exactly as the page laid them out.
+ * Layout is never recomputed: every word is drawn at the position the browser
+ * already gave it, so justification, indent, tracking and wrapping are the
+ * browser's own. The real element keeps its text (transparent), so the canvas
+ * and the layout cannot drift apart.
  */
 
 import { env, isFinePointer, prefersReducedMotion, nextFrame, whenIdle } from './env.js';
@@ -472,67 +472,16 @@ async function finishMaybeAsync(ctx, spec) {
   else finish(ctx, spec);
 }
 
-/** Draws one line into its own canvas and paints the effect over it. */
-function prepareLine(node, { words, width, lineHeight, baseline, blockHeight, lineTop, config }) {
-  const { font, tracking, gap, indent, dpr, sigmas, pad } = config;
-
-  const W = Math.max(1, Math.round(width * dpr));
-  const H = Math.max(1, Math.round(lineHeight * dpr));
-  const cw = W + pad.x * 2;
-  const ch = H + pad.top + pad.bottom;
-
-  let canvas = node.querySelector('.grain__c');
-  if (!canvas) {
-    canvas = document.createElement('canvas');
-    canvas.className = 'grain__c';
-    canvas.setAttribute('aria-hidden', 'true');
-    node.appendChild(canvas);
-  }
-  canvas.width = cw;
-  canvas.height = ch;
-  canvas.style.left = `${-pad.x / dpr}px`;
-  canvas.style.top = `${-pad.top / dpr}px`;
-  canvas.style.width = `${cw / dpr}px`;
-  canvas.style.height = `${ch / dpr}px`;
-
-  const ctx = canvas.getContext('2d', { willReadFrequently: true });
-
-  /* 1. the text, crisp - in CSS pixels, the backing store is the DPR one */
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.clearRect(0, 0, cw / dpr, ch / dpr);
-  ctx.font = font;
-  if (supportsTracking()) ctx.letterSpacing = `${tracking}px`;
-  ctx.fillStyle = '#fff';
-  ctx.textBaseline = 'alphabetic';
-
-  const mctx = measureCtx;
-  mctx.font = font;
-  let x = indent + pad.x / dpr;
-  const y = baseline + pad.top / dpr;
-  words.forEach((word) => {
-    ctx.fillText(word, x, y);
-    x += mctx.measureText(word).width + gap;
-  });
-
-  return { ctx, cw, ch, pad, W, sigmas, linePx: lineTop * dpr, blockPx: blockHeight * dpr };
-}
-
-function paintLine(node, spec) {
-  const prep = prepareLine(node, spec);
-  finish(prep.ctx, prep);
-}
-
-async function paintLineAsync(node, spec) {
-  const prep = prepareLine(node, spec);
-  await finishMaybeAsync(prep.ctx, prep);
-}
-
-/**
- * Paints an unsplit block as a single canvas. Word positions come from Range
- * rects, so the canvas follows the browser's own line breaking and spacing
- * instead of the DOM being cut into one element per line.
+/*
+ * One painter for both shapes of element: a split line (one canvas inside its
+ * own line, so the line reveal carries the canvas with it) and an unsplit
+ * paragraph (one canvas over the whole block). Words are placed from Range
+ * rects, so the browser's own line breaking, justification and spacing are the
+ * only layout there is - there is no second word-spacing model to drift.
+ * `lineTop` is how far the element starts inside its block, so the blur ramp
+ * stays continuous across lines.
  */
-function prepareBlock(el, config) {
+function prepareCanvas(el, config, lineTop = 0) {
   const { width, lineHeight, baseline, font, tracking, uppercase, dpr, sigmas, pad } = config;
 
   const node = [...el.childNodes].find((child) => child.nodeType === 3 && child.textContent.trim());
@@ -596,26 +545,26 @@ function prepareBlock(el, config) {
     );
   });
 
-  return { ctx, cw, ch, pad, W, sigmas, linePx: 0, blockPx: blockHeight * dpr };
+  return { ctx, cw, ch, pad, W, sigmas, linePx: lineTop * dpr, blockPx: config.blockHeight * dpr };
 }
 
-function paintBlock(el, config) {
-  const prep = prepareBlock(el, config);
+function paintCanvas(el, config, lineTop = 0, block = false) {
+  const prep = prepareCanvas(el, config, lineTop);
   if (!prep) return false;
   finish(prep.ctx, prep);
-  el.classList.add('is-grain', 'is-grain--block');
+  if (block) el.classList.add('is-grain', 'is-grain--block');
   return true;
 }
 
-async function paintBlockAsync(el, config) {
-  const prep = prepareBlock(el, config);
+async function paintCanvasAsync(el, config, lineTop = 0, block = false) {
+  const prep = prepareCanvas(el, config, lineTop);
   if (!prep) return false;
 
-  // Small blocks finish in one go; only a canvas big enough to become a long
-  // task pays for the extra frames.
+  // Small canvases finish in one go; only one big enough to become a long task
+  // pays for the extra frames.
   await finishMaybeAsync(prep.ctx, prep);
 
-  el.classList.add('is-grain', 'is-grain--block');
+  if (block) el.classList.add('is-grain', 'is-grain--block');
   return true;
 }
 
@@ -623,15 +572,15 @@ async function paintBlockAsync(el, config) {
 function measureConfig(el) {
   const style = getComputedStyle(el);
   const fontSize = parseFloat(style.fontSize);
-  const width = el.getBoundingClientRect().width;
+  const rect = el.getBoundingClientRect();
+  const width = rect.width;
+  const blockHeight = rect.height;
   if (!fontSize || width < 2) return null;
 
   const lineHeight = parseFloat(style.lineHeight) || fontSize * 1.2;
   const font = `${style.fontWeight} ${fontSize}px ${style.fontFamily}`;
   const tracking = style.letterSpacing === 'normal' ? 0 : parseFloat(style.letterSpacing) || 0;
   const uppercase = style.textTransform === 'uppercase';
-  const justified = style.textAlign === 'justify';
-  const indent = parseFloat(style.textIndent) || 0;
   const radius = parseFloat(el.dataset.grain) || 6;
 
   // The canvas is the visible text, so this keeps the original 2x cap. The
@@ -651,7 +600,6 @@ function measureConfig(el) {
 
   const scale = (document.documentElement.clientWidth * dpr) / REFERENCE_WIDTH;
   const sigmas = SIGMAS.map((sigma) => sigma * (radius / 6) * scale);
-  const space = measureCtx.measureText(' ').width;
 
   // room for the blur, plus whatever the glyphs reach past their line box
   // (a descender such as the comma in "FAR," starts below the 0.82 box)
@@ -664,15 +612,13 @@ function measureConfig(el) {
 
   return {
     width,
+    blockHeight,
     lineHeight,
     font,
     tracking,
     uppercase,
-    justified,
-    indent,
     dpr,
     sigmas,
-    space,
     baseline,
     pad,
   };
@@ -685,32 +631,9 @@ function renderElement(el) {
 
   // an unsplit block (a phone) has no line elements to paint one by one, so the
   // whole paragraph is drawn as one canvas instead
-  if (!nodes.length) return paintBlock(el, config);
+  if (!nodes.length) return paintCanvas(el, config, 0, true);
 
-  const { width, lineHeight, baseline, font, tracking, uppercase, justified, indent, space, dpr, sigmas, pad } = config;
-  const blockHeight = nodes.length * lineHeight;
-
-  nodes.forEach((node, i) => {
-    const raw = node.textContent;
-    const words = (uppercase ? raw.toUpperCase() : raw).split(/\s+/).filter(Boolean);
-    if (!words.length) return;
-
-    const lead = i === 0 ? indent : 0;
-    const sum = words.reduce((total, word) => total + measureCtx.measureText(word).width, 0);
-    const isLast = i === nodes.length - 1;
-    const gap =
-      justified && !isLast && words.length > 1 ? (width - lead - sum) / (words.length - 1) : space;
-
-    paintLine(node, {
-      words,
-      width,
-      lineHeight,
-      baseline,
-      blockHeight,
-      lineTop: i * lineHeight,
-      config: { font, tracking, gap, indent: lead, dpr, sigmas, pad },
-    });
-  });
+  nodes.forEach((node, i) => paintCanvas(node, config, i * config.lineHeight));
 
   el.classList.add('is-grain');
   return true;
@@ -726,47 +649,16 @@ async function renderElementAsync(el) {
   const config = measureConfig(el);
   if (!config) return false;
 
-  if (!nodes.length) return paintBlockAsync(el, config);
-
-  const {
-    width,
-    lineHeight,
-    baseline,
-    font,
-    tracking,
-    uppercase,
-    justified,
-    indent,
-    space,
-    dpr,
-    sigmas,
-    pad,
-  } = config;
-  const blockHeight = nodes.length * lineHeight;
+  if (!nodes.length) {
+    const painted = await paintCanvasAsync(el, config, 0, true);
+    return painted && el.isConnected;
+  }
 
   for (let i = 0; i < nodes.length; i += 1) {
-    const node = nodes[i];
-    const raw = node.textContent;
-    const words = (uppercase ? raw.toUpperCase() : raw).split(/\s+/).filter(Boolean);
-
-    if (words.length) {
-      const lead = i === 0 ? indent : 0;
-      const sum = words.reduce((total, word) => total + measureCtx.measureText(word).width, 0);
-      const isLast = i === nodes.length - 1;
-      const gap =
-        justified && !isLast && words.length > 1 ? (width - lead - sum) / (words.length - 1) : space;
-
-      await paintLineAsync(node, {
-        words,
-        width,
-        lineHeight,
-        baseline,
-        blockHeight,
-        lineTop: i * lineHeight,
-        config: { font, tracking, gap, indent: lead, dpr, sigmas, pad },
-      });
-    }
-
+    await paintCanvasAsync(nodes[i], config, i * config.lineHeight);
+    // a resize re-splits the block, so the nodes captured above are gone: this
+    // paint no longer describes the DOM and must not claim the element
+    if (!nodes[i].isConnected) return false;
     if (i < nodes.length - 1) await nextFrame();
   }
 

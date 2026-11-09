@@ -59,7 +59,7 @@ button {
 
   --lead: calc(60 * var(--s));
 
-  --stack-gap: calc(520 * var(--s));
+  --stack-gap: calc(420 * var(--s));
 
   /* motion: one shared set, mirrored in src/lib/motion.js */
   --motion-fast: 120ms; /* hover, focus, button feedback */

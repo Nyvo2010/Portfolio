@@ -31,7 +31,7 @@
   }
 
   .section {
-    padding-top: calc(260 * var(--s));
+    padding-top: calc(210 * var(--s));
   }
 
   .section--last {

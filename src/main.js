@@ -19,7 +19,7 @@ import { initScrollBlur } from './lib/blur.js';
 import { initSmoothScroll } from './lib/scroll.js';
 import { splitLines, unsplit } from './lib/split.js';
 import { initGrainText, renderGrainText } from './lib/grain-text.js';
-import { nextFrame, onMediaChange } from './lib/env.js';
+import { nextFrame } from './lib/env.js';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -53,6 +53,19 @@ function splitAll() {
     if (mobile.matches) unsplit(el);
     else splitLines(el);
   });
+}
+
+/**
+ * The type is always rebuilt in one order: back to plain text, fit to the stage,
+ * then split. Fitting a block that is already split measures the line breaks of
+ * the previous width, so the fitted size can force an extra wrap. Every path
+ * that changes the width goes through here, so boot, resize and a late font all
+ * land on the same layout.
+ */
+function relayoutType() {
+  document.querySelectorAll(SPLIT).forEach((el) => unsplit(el));
+  fitDisplays();
+  splitAll();
 }
 
 /** One failing effect must never stop the rest of the page from booting. */
@@ -109,8 +122,7 @@ async function boot() {
   const fontTimedOut = await readyFonts();
 
   safe('scale', applyScale);
-  safe('fit', fitDisplays);
-  safe('split', splitAll);
+  safe('type', relayoutType);
 
   // the hidden states have to exist while the curtain still covers the page,
   // otherwise the first thing the page does is show its finished layout and
@@ -142,8 +154,7 @@ async function boot() {
   if (fontTimedOut && document.fonts && document.fonts.ready) {
     document.fonts.ready.then(() => {
       safe('late fonts', () => {
-        splitAll();
-        fitDisplays();
+        relayoutType();
         renderGrainText();
         if (!reduced()) gsap.set(`${SPLIT} .ln__i`, { yPercent: 0 });
         ScrollTrigger.refresh();
@@ -151,38 +162,37 @@ async function boot() {
     });
   }
 
-  let lastWidth = document.documentElement.clientWidth;
+  // One path for every layout change. The width is read when the debounce
+  // fires, never when the event arrives: a resize event can land before the new
+  // size is in effect, and guarding on that stale width skipped the relayout for
+  // good, leaving the hero fitted and split for the previous size. A phone that
+  // hides its URL bar also reports a resize without changing the width, and the
+  // guard still ignores those.
+  let laidOutWidth = document.documentElement.clientWidth;
   let resizeTimer;
 
-  const onResize = () => {
-    // A phone reports a resize when its URL bar hides, but the width does not
-    // change. Ignoring those keeps scrolling smooth.
+  const relayout = () => {
     const width = document.documentElement.clientWidth;
-    if (width === lastWidth) return;
-    lastWidth = width;
+    if (width === laidOutWidth) return;
+    laidOutWidth = width;
 
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => {
-      safe('resize', () => {
-        applyScale();
-        // re-split before fitting: the grain canvas of every split line sits
-        // outside its line box, and that overflow reads as "the text does not
-        // fit", shrinking the display type to its minimum on any resize
-        splitAll();
-        fitDisplays();
-        renderGrainText();
-        if (!reduced()) gsap.set(`${SPLIT} .ln__i`, { yPercent: 0 });
-        ScrollTrigger.refresh();
-      });
-    }, 180);
+    safe('resize', () => {
+      applyScale();
+      relayoutType();
+      renderGrainText();
+      if (!reduced()) gsap.set(`${SPLIT} .ln__i`, { yPercent: 0 });
+      ScrollTrigger.refresh();
+    });
   };
 
-  window.addEventListener('resize', onResize, { passive: true });
-  window.addEventListener('orientationchange', onResize, { passive: true });
-  onMediaChange('(max-width: 860px)', () => {
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(onResize, 60);
-  });
+  window.addEventListener(
+    'resize',
+    () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(relayout, 150);
+    },
+    { passive: true },
+  );
 }
 
 // If a runtime error happens before the curtain is lifted, take the curtain
