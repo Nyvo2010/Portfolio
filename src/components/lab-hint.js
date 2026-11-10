@@ -1,5 +1,6 @@
 import { labHome } from '../data.js';
 import { getLabPiecesBySlug } from '../lib/lab-pieces.js';
+import { onLayout } from '../lib/layout.js';
 
 /**
  * Five overlapping plates on the homepage. The slots are fixed so the cluster
@@ -118,15 +119,7 @@ export async function initLabHint() {
     document.fonts.ready.then(placeCards).catch(() => {});
   }
 
-  let placeTimer = 0;
-  window.addEventListener(
-    'resize',
-    () => {
-      clearTimeout(placeTimer);
-      placeTimer = setTimeout(placeCards, 120);
-    },
-    { passive: true },
-  );
+  onLayout(placeCards);
 
   const clear = () => {
     cluster.classList.remove('is-hovering');

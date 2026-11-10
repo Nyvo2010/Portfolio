@@ -16,7 +16,8 @@ import { initHero } from './components/hero.js';
 import { initMenu } from './components/menu.js';
 import { fitText } from './lib/fit.js';
 import { initScale } from './lib/scale.js';
-import { lineReveals, softReveals, heroIntro, reduced } from './lib/reveal.js';
+import { lineReveals, softReveals, heroIntro } from './lib/reveal.js';
+import { initLayout, onLayout } from './lib/layout.js';
 import { initScrollBlur } from './lib/blur.js';
 import { splitLines, unsplit } from './lib/split.js';
 import { initGrainText, renderGrainText } from './lib/grain-text.js';
@@ -122,6 +123,17 @@ async function boot() {
   safe('clock', initClock);
   safe('menu', initMenu);
 
+  // One ordered pass for every viewport change, installed before the first
+  // paint so a resize during boot and one after it take the same path.
+  // Components registered their own work on top of it (grain images, row
+  // geometry, the lab cluster); the forced variant serves late fonts.
+  const relayoutNow = initLayout(() => {
+    applyScale();
+    relayoutType();
+    lineReveals();
+    renderGrainText();
+  });
+
   // sizing the display type has to happen against the real face, not the fallback
   const fontTimedOut = await readyFonts();
 
@@ -155,49 +167,12 @@ async function boot() {
   safe('scroll blur', initScrollBlur);
 
   ScrollTrigger.refresh();
+  // last on every resize: every trigger measures the finished layout
+  onLayout(() => ScrollTrigger.refresh());
 
   if (fontTimedOut && document.fonts && document.fonts.ready) {
-    document.fonts.ready.then(() => {
-      safe('late fonts', () => {
-        relayoutType();
-        renderGrainText();
-        if (!reduced()) gsap.set(`${SPLIT} .ln__i`, { yPercent: 0 });
-        ScrollTrigger.refresh();
-      });
-    });
+    document.fonts.ready.then(() => safe('late fonts', relayoutNow));
   }
-
-  // One path for every layout change. The width is read when the debounce
-  // fires, never when the event arrives: a resize event can land before the new
-  // size is in effect, and guarding on that stale width skipped the relayout for
-  // good, leaving the hero fitted and split for the previous size. A phone that
-  // hides its URL bar also reports a resize without changing the width, and the
-  // guard still ignores those.
-  let laidOutWidth = document.documentElement.clientWidth;
-  let resizeTimer;
-
-  const relayout = () => {
-    const width = document.documentElement.clientWidth;
-    if (width === laidOutWidth) return;
-    laidOutWidth = width;
-
-    safe('resize', () => {
-      applyScale();
-      relayoutType();
-      renderGrainText();
-      if (!reduced()) gsap.set(`${SPLIT} .ln__i`, { yPercent: 0 });
-      ScrollTrigger.refresh();
-    });
-  };
-
-  window.addEventListener(
-    'resize',
-    () => {
-      clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(relayout, 150);
-    },
-    { passive: true },
-  );
 }
 
 // If a runtime error happens before the curtain is lifted, take the curtain

@@ -11,6 +11,7 @@ import {
 import { vsCodePath } from '../lib/icons.js';
 import { DUR, EASE } from '../lib/motion.js';
 import { env, whenIdle } from '../lib/env.js';
+import { onLayout } from '../lib/layout.js';
 import { projects, stack } from '../data.js';
 
 const ICONS = {
@@ -78,14 +79,16 @@ function interact(root, items, kind, box, media) {
   let open = false;
 
   gsap.set(media, { xPercent: -50, yPercent: -50, opacity: 0, scale: 0.94 });
-  gsap.set(box, { y: 0 });
+  // the bar is one pixel tall and scales to the row: scaling is a compositor
+  // job, while animating height relaid out the list on every frame of a hover
+  gsap.set(box, { y: 0, height: 1, transformOrigin: '0 0' });
 
   const magnetX = gsap.quickTo(media, 'x', { duration: DUR.slow, ease: EASE.out });
   const magnetY = gsap.quickTo(media, 'y', { duration: DUR.slow, ease: EASE.out });
   // quickTo retargets the same tween, so the highlight glides through a fast
   // pass down the list instead of restarting its ease on every row
   const boxY = gsap.quickTo(box, 'y', { duration: DUR.base, ease: EASE.out });
-  const boxH = gsap.quickTo(box, 'height', { duration: DUR.base, ease: EASE.out });
+  const boxScale = gsap.quickTo(box, 'scaleY', { duration: DUR.base, ease: EASE.out });
 
   // the bar stands a little taller than the row it marks and stays centred on
   // the line, so it reads as a highlight around the text, not a text box
@@ -211,7 +214,7 @@ function interact(root, items, kind, box, media) {
       const { y, height } = boxRect(row);
 
       boxY(y);
-      boxH(height);
+      boxScale(height);
       swapMedia(index);
     }
 
@@ -250,10 +253,10 @@ function interact(root, items, kind, box, media) {
     });
   }
 
-  window.addEventListener('resize', () => {
+  onLayout(() => {
     if (!open || current < 0) return;
     const { y, height } = boxRect(rows[current]);
-    gsap.set(box, { y, height });
+    gsap.set(box, { y, scaleY: height });
   });
 }
 

@@ -5,16 +5,14 @@ export function initScale() {
 
   const apply = () => {
     const width = root.clientWidth;
-    // A phone's URL bar fires resize without changing the width. Writing the
-    // same custom property again invalidates layout for no reason.
     if (width === last) return;
     last = width;
     root.style.setProperty('--vw', `${width}px`);
   };
 
   apply();
-  window.addEventListener('resize', apply, { passive: true });
-  window.addEventListener('orientationchange', apply, { passive: true });
 
+  // Resizes are owned by initLayout() in lib/layout.js, which calls this
+  // before any effect measures the new geometry.
   return apply;
 }

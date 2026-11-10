@@ -10,7 +10,8 @@ import { initLabLoader } from './components/lab-loader.js';
 import { initPageTransition } from './components/page-transition.js';
 import { getLabPieces } from './lib/lab-pieces.js';
 import { initScale } from './lib/scale.js';
-import { initGrainText } from './lib/grain-text.js';
+import { initLayout } from './lib/layout.js';
+import { initGrainText, renderGrainText } from './lib/grain-text.js';
 import { introHeader } from './lib/reveal.js';
 import { wait } from './lib/env.js';
 
@@ -27,7 +28,12 @@ function safe(label, fn) {
 // curtain: a slow folder probe must not look like a dead module.
 document.documentElement.setAttribute('data-lab-booting', '1');
 
-safe('scale', initScale);
+const applyScale = initScale();
+initLayout(() => {
+  applyScale();
+  renderGrainText();
+});
+
 safe('links', initLinks);
 safe('page transition', initPageTransition);
 safe('clock', initClock);

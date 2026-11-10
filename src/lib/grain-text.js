@@ -21,7 +21,14 @@
  * and the layout cannot drift apart.
  */
 
-import { env, isFinePointer, prefersReducedMotion, nextFrame, whenIdle } from './env.js';
+import {
+  env,
+  isFinePointer,
+  prefersReducedMotion,
+  paintPause,
+  whenIdle,
+  whenScrollSettled,
+} from './env.js';
 
 export const SIGMAS = [0, 2, 4, 6, 8]; // blur levels @ 2576px reference
 // Flat through the first share of the block, then a steep exponential rise.
@@ -44,7 +51,8 @@ const MOBILE_HEADING_SCALE = 0.7;
 // Refinements on the site-wide scale: display type keeps 80% of it, and the
 // about copy 60%, so the long paragraph reads clearest.
 const HEADING_SCALE = 0.8;
-const ABOUT_SCALE = 0.6;
+// The about copy reads crisp: its progressive blur is off, the grain stays.
+const ABOUT_SCALE = 0;
 const mobile = typeof window.matchMedia === 'function' ? window.matchMedia('(max-width: 860px)') : null;
 
 const clamp = (value, min, max) => (value < min ? min : value > max ? max : value);
@@ -362,8 +370,29 @@ function paintRows(cache, start, end) {
   }
 }
 
+/** Blur this small is invisible: the canvas is grain only, never re-blended. */
+const isSharp = (sigmas) => sigmas.every((sigma) => sigma < 0.3);
+
+const weightNow = () =>
+  ((clamp(pointerX, 0, 1) + clamp(pointerY, 0, 1)) * 0.5 * 256) | 0;
+
+function paintStaticRows(cache, start, end) {
+  const { levels, noise, pixels } = cache;
+  const base = levels[0];
+  for (let i = start; i < end; i += 1) pixels[i] = GRAIN_LUT[(base[i] << 8) | noise[i]];
+}
+
 function paint(ctx, cache) {
-  paintRows(cache, 0, cache.count);
+  if (cache.near) {
+    // the blend is quantised to 256 pointer weights, so a move that lands on
+    // the same weight would repaint identical pixels
+    const weight = weightNow();
+    if (cache.weight === weight) return;
+    cache.weight = weight;
+    paintRows(cache, 0, cache.count);
+  } else {
+    paintStaticRows(cache, 0, cache.count);
+  }
   ctx.putImageData(cache.image, 0, 0);
 }
 
@@ -382,23 +411,30 @@ function finish(ctx, { cw, ch, pad, W, sigmas, linePx, blockPx }) {
 
   const levels = new Array(sigmas.length);
   levels[0] = base;
+  const sharp = isSharp(sigmas);
+  let ramps = null;
 
-  const hw = Math.max(1, (cw + 1) >> 1);
-  const hh = Math.max(1, (ch + 1) >> 1);
-  const small = downsample(base, cw, ch, hw, hh);
+  if (sharp) {
+    for (let i = 1; i < sigmas.length; i += 1) levels[i] = base;
+  } else {
+    const hw = Math.max(1, (cw + 1) >> 1);
+    const hh = Math.max(1, (ch + 1) >> 1);
+    const small = downsample(base, cw, ch, hw, hh);
 
-  for (let i = 1; i < sigmas.length; i += 1) {
-    const blurred = blur(small, hw, hh, Math.max(0.6, sigmas[i] * 0.5));
-    levels[i] = upsample(blurred, hw, hh, cw, ch);
+    for (let i = 1; i < sigmas.length; i += 1) {
+      const blurred = blur(small, hw, hh, Math.max(0.6, sigmas[i] * 0.5));
+      levels[i] = upsample(blurred, hw, hh, cw, ch);
+    }
+
+    ramps = buildRamp(cw, ch, pad, W, linePx, blockPx);
   }
 
   const image = new ImageData(cw, ch);
-  const ramps = buildRamp(cw, ch, pad, W, linePx, blockPx);
   const cache = {
     ctx,
     levels,
-    near: ramps.near,
-    far: ramps.far,
+    near: ramps && ramps.near,
+    far: ramps && ramps.far,
     noise: buildNoise(count),
     image,
     pixels: new Uint32Array(image.data.buffer),
@@ -406,7 +442,8 @@ function finish(ctx, { cw, ch, pad, W, sigmas, linePx, blockPx }) {
   };
 
   caches.set(ctx.canvas, cache);
-  live.add(ctx.canvas);
+  // a sharp canvas has nothing to re-blend when the pointer moves
+  if (!sharp) live.add(ctx.canvas);
   paint(ctx, cache);
 }
 
@@ -425,33 +462,43 @@ async function finishAsync(ctx, { cw, ch, pad, W, sigmas, linePx, blockPx }) {
   const base = new Uint8Array(count);
   for (let i = 0; i < count; i += 1) base[i] = data[i * 4 + 3];
 
+  const sharp = isSharp(sigmas);
   const hw = Math.max(1, (cw + 1) >> 1);
   const hh = Math.max(1, (ch + 1) >> 1);
   const rows = Math.max(1, Math.floor(CHUNK_PIXELS / Math.max(1, cw)));
 
-  const small = new Uint8Array(hw * hh);
-  await nextFrame();
-  for (let y = 0; y < hh; y += rows) {
-    downsampleInto(base, cw, ch, hw, hh, small, y, Math.min(hh, y + rows));
-    await nextFrame();
-  }
+  let blurredLevels = null;
+  let columns = null;
+  let columnsFar = null;
 
-  // The blur passes are already at half resolution; they are cheap enough to
-  // run one level per frame instead of chunking them further.
-  const blurredLevels = new Array(sigmas.length);
-  for (let i = 1; i < sigmas.length; i += 1) {
-    blurredLevels[i] = blur(small, hw, hh, Math.max(0.6, sigmas[i] * 0.5));
-    if (i < sigmas.length - 1) await nextFrame();
+  if (!sharp) {
+    const small = new Uint8Array(hw * hh);
+    await paintPause();
+    for (let y = 0; y < hh; y += rows) {
+      downsampleInto(base, cw, ch, hw, hh, small, y, Math.min(hh, y + rows));
+      await paintPause();
+    }
+
+    // The blur passes are already at half resolution; they are cheap enough to
+    // run one level per frame instead of chunking them further.
+    blurredLevels = new Array(sigmas.length);
+    for (let i = 1; i < sigmas.length; i += 1) {
+      blurredLevels[i] = blur(small, hw, hh, Math.max(0.6, sigmas[i] * 0.5));
+      if (i < sigmas.length - 1) await paintPause();
+    }
+
+    const ramp = rampColumns(cw, pad, W);
+    columns = ramp.columns;
+    columnsFar = ramp.columnsFar;
   }
 
   const levels = new Array(sigmas.length);
   levels[0] = base;
-  for (let i = 1; i < sigmas.length; i += 1) levels[i] = new Uint8Array(count);
+  for (let i = 1; i < sigmas.length; i += 1) levels[i] = sharp ? base : new Uint8Array(count);
 
   const image = new ImageData(cw, ch);
-  const near = new Uint8Array(count);
-  const far = new Uint8Array(count);
-  const { columns, columnsFar } = rampColumns(cw, pad, W);
+  const near = sharp ? null : new Uint8Array(count);
+  const far = sharp ? null : new Uint8Array(count);
   const cache = {
     ctx,
     levels,
@@ -464,7 +511,7 @@ async function finishAsync(ctx, { cw, ch, pad, W, sigmas, linePx, blockPx }) {
   };
 
   caches.set(ctx.canvas, cache);
-  live.add(ctx.canvas);
+  if (!sharp) live.add(ctx.canvas);
 
   // One small-buffer row feeds two output rows. Expanding every level, building
   // the ramp and blending the same band in one pass keeps the number of frames
@@ -475,12 +522,16 @@ async function finishAsync(ctx, { cw, ch, pad, W, sigmas, linePx, blockPx }) {
     const y0 = sy * 2;
     const y1 = Math.min(ch, ey * 2);
 
-    for (let i = 1; i < sigmas.length; i += 1) {
-      upsampleInto(blurredLevels[i], hw, hh, cw, ch, levels[i], sy, ey);
+    if (sharp) {
+      paintStaticRows(cache, y0 * cw, y1 * cw);
+    } else {
+      for (let i = 1; i < sigmas.length; i += 1) {
+        upsampleInto(blurredLevels[i], hw, hh, cw, ch, levels[i], sy, ey);
+      }
+      buildRampRows(columns, columnsFar, near, far, cw, pad, linePx, blockPx, y0, y1);
+      paintRows(cache, y0 * cw, y1 * cw);
     }
-    buildRampRows(columns, columnsFar, near, far, cw, pad, linePx, blockPx, y0, y1);
-    paintRows(cache, y0 * cw, y1 * cw);
-    await nextFrame();
+    await paintPause();
   }
 
   ctx.putImageData(image, 0, 0);
@@ -700,7 +751,7 @@ async function renderElementAsync(el) {
     // a resize re-splits the block, so the nodes captured above are gone: this
     // paint no longer describes the DOM and must not claim the element
     if (!nodes[i].isConnected) return false;
-    if (i < nodes.length - 1) await nextFrame();
+    if (i < nodes.length - 1) await paintPause();
   }
 
   el.classList.add('is-grain');
@@ -709,14 +760,15 @@ async function renderElementAsync(el) {
 
 /* ---------- pointer-driven blur ---------- */
 
+function pruneLive() {
+  for (const canvas of live) if (!canvas.isConnected) live.delete(canvas);
+}
+
 /** Canvases on (or just off) screen, in paint order. */
 function visibleItems() {
+  pruneLive();
   const items = [];
   for (const canvas of live) {
-    if (!canvas.isConnected) {
-      live.delete(canvas);
-      continue;
-    }
     const cache = caches.get(canvas);
     if (!cache) continue;
 
@@ -777,7 +829,7 @@ function tick() {
 }
 
 function onPointerMove(event) {
-  if (event.pointerType === 'touch') return;
+  if (event.pointerType === 'touch' || !live.size) return;
   // relative to the screen, not the block: left/top are 0, right/bottom are 1
   targetX = clamp(event.clientX / window.innerWidth, 0, 1);
   targetY = clamp(event.clientY / window.innerHeight, 0, 1);
@@ -857,12 +909,15 @@ export async function initGrainText(selector = '[data-grain]') {
           // Deferred so a block entering during a scroll never blocks the
           // scroll itself. Lines are painted across frames for the same
           // reason: a 15-line paragraph must not become one 200ms task.
-          whenIdle(async () => {
-            try {
-              if (await renderElementAsync(entry.target)) rendered.add(entry.target);
-            } catch (error) {
-              console.error('[portfolio] grain', error);
-            }
+          whenIdle(() => {
+            // starting this paint mid-scroll competes with the scroll itself
+            whenScrollSettled(async () => {
+              try {
+                if (await renderElementAsync(entry.target)) rendered.add(entry.target);
+              } catch (error) {
+                console.error('[portfolio] grain', error);
+              }
+            });
           }, 500);
         });
       },
@@ -902,22 +957,71 @@ export async function initGrainText(selector = '[data-grain]') {
   }
 }
 
-/** Re-renders the elements that already have a canvas (the DOM was re-split). */
-export function renderGrainText() {
-  rendered.forEach((el) => {
+function resetElement(el) {
+  // the canvas is the only visible text once is-grain is set: a block that
+  // cannot be painted falls back to plain text rather than staying transparent
+  el.classList.remove('is-grain', 'is-grain--block');
+  el.querySelectorAll('.grain__c').forEach((canvas) => {
+    live.delete(canvas);
+    canvas.remove();
+  });
+  rendered.delete(el);
+}
+
+/**
+ * Re-paints the blocks that have already painted once, after the type has been
+ * re-split. Only what is on screen is repainted: a resize used to run the whole
+ * blur pipeline for every block on the page, including ones far below the fold.
+ * The rest drop their canvas and wait for the observer again, which is exactly
+ * how they were painted the first time. The paint is chunked, so it can span
+ * frames instead of blocking the resize.
+ */
+async function repaintVisible() {
+  pruneLive();
+  const height = window.innerHeight;
+
+  for (const el of [...rendered]) {
+    if (!el.isConnected) {
+      rendered.delete(el);
+      continue;
+    }
+
+    const rect = el.getBoundingClientRect();
+    if (observer && (rect.bottom < -200 || rect.top > height + 600)) {
+      resetElement(el);
+      observer.observe(el);
+      continue;
+    }
+
     try {
-      if (renderElement(el)) return;
+      if (await renderElementAsync(el)) rendered.add(el);
+      else resetElement(el);
     } catch (error) {
       console.error('[portfolio] grain', error);
+      resetElement(el);
     }
-    // the canvas is the only visible text once is-grain is set: a block that
-    // cannot be painted has to fall back to plain text instead of staying
-    // transparent until the page is reloaded
-    el.classList.remove('is-grain', 'is-grain--block');
-    el.querySelectorAll('.grain__c').forEach((canvas) => {
-      live.delete(canvas);
-      canvas.remove();
-    });
-    rendered.delete(el);
-  });
+  }
+}
+
+let repainting = false;
+let repaintQueued = false;
+
+export async function renderGrainText() {
+  // A resize can land while a pass is still painting. Queue one more pass
+  // instead of starting a second one on the same canvases: two passes fought
+  // over the same nodes and could delete the canvas the newer one just made.
+  repaintQueued = true;
+  if (repainting) return;
+  repainting = true;
+
+  try {
+    while (repaintQueued) {
+      repaintQueued = false;
+      await repaintVisible();
+    }
+  } catch (error) {
+    console.error('[portfolio] grain', error);
+  } finally {
+    repainting = false;
+  }
 }

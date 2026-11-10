@@ -1,6 +1,7 @@
 import { gsap } from 'gsap';
 import { DUR, EASE, STAGGER } from '../lib/motion.js';
 import { prefersReducedMotion } from '../lib/env.js';
+import { onLayout } from '../lib/layout.js';
 
 /**
  * Infinite canvas.
@@ -598,31 +599,8 @@ export function initLabCanvas(pieces = []) {
     focus(instances.find((instance) => instance.el === el));
   });
 
-  let lastWidth = document.documentElement.clientWidth;
-  let resizeTimer = 0;
-
-  window.addEventListener(
-    'resize',
-    () => {
-      clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(() => {
-        const width = document.documentElement.clientWidth;
-        // a phone hiding its URL bar reports a resize without changing width
-        if (width === lastWidth) return;
-        lastWidth = width;
-        layout();
-      }, 150);
-    },
-    { passive: true },
-  );
-
-  window.addEventListener('orientationchange', () => {
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => {
-      lastWidth = document.documentElement.clientWidth;
-      layout();
-    }, 220);
-  });
+  // resize is owned by lib/layout.js, which also filters the phone URL bar
+  onLayout(layout);
 
   layout();
   root.style.setProperty('--motion', '0');

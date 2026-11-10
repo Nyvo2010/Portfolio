@@ -23,7 +23,8 @@ import {
   GRAIN_AMOUNT,
   REFERENCE_WIDTH,
 } from './grain-text.js';
-import { nextFrame, whenIdle } from './env.js';
+import { paintPause, whenIdle, whenScrollSettled } from './env.js';
+import { onLayout } from './layout.js';
 
 // Same steep landing as the text curve; the picture keeps a slightly longer
 // flat middle (RAMP_START) so the subject stays in focus.
@@ -137,7 +138,11 @@ function downsampleRgba(src, w, h, dw, dh) {
 
 /* ---------- paint ---------- */
 
+/** Newest paint wins: a resize mid-paint must not put the old width back. */
+let paintToken = 0;
+
 async function paint(figure) {
+  const token = ++paintToken;
   const img = figure.querySelector('img');
   if (!img || !img.naturalWidth) return false;
 
@@ -190,14 +195,21 @@ async function paint(figure) {
   const source = ctx.getImageData(0, 0, cw, ch).data;
 
   // premultiplied, so blurring across the transparent pad does not pull the
-  // colours towards black
+  // colours towards black. Chunked: the whole picture in one task was the
+  // longest block this effect produced, and it was easy to feel on scroll.
   const premultiplied = new Uint8ClampedArray(source.length);
-  for (let i = 0; i < source.length; i += 4) {
-    const alpha = source[i + 3];
-    premultiplied[i] = (source[i] * alpha) / 255;
-    premultiplied[i + 1] = (source[i + 1] * alpha) / 255;
-    premultiplied[i + 2] = (source[i + 2] * alpha) / 255;
-    premultiplied[i + 3] = alpha;
+  const preRows = Math.max(1, Math.floor(CHUNK_PIXELS / Math.max(1, cw)));
+  for (let y0 = 0; y0 < ch; y0 += preRows) {
+    const y1 = Math.min(ch, y0 + preRows);
+    for (let i = y0 * cw * 4; i < y1 * cw * 4; i += 4) {
+      const alpha = source[i + 3];
+      premultiplied[i] = (source[i] * alpha) / 255;
+      premultiplied[i + 1] = (source[i + 1] * alpha) / 255;
+      premultiplied[i + 2] = (source[i + 2] * alpha) / 255;
+      premultiplied[i + 3] = alpha;
+    }
+    await paintPause();
+    if (token !== paintToken) return false;
   }
 
   // the levels are smooth, so they are blurred at half resolution and sampled
@@ -210,6 +222,9 @@ async function paint(figure) {
   levels[0] = premultiplied;
   for (let i = 1; i < sigmas.length; i += 1) {
     levels[i] = blurRgba(half, hw, hh, Math.max(0.6, sigmas[i] * 0.5));
+    // one level per frame instead of every level in one long task
+    if (i < sigmas.length - 1) await paintPause();
+    if (token !== paintToken) return false;
   }
 
   const out = new ImageData(cw, ch);
@@ -310,7 +325,8 @@ async function paint(figure) {
       }
     }
 
-    await nextFrame();
+    await paintPause();
+    if (token !== paintToken) return false;
   }
 
   ctx.putImageData(out, 0, 0);
@@ -328,6 +344,8 @@ export function initGrainImages(selector = '[data-grain-image]') {
   if (!figures.length) return;
 
   const painted = new Map();
+  // figures whose paint has been requested, finished or still in flight
+  const requested = new Set();
   const io =
     typeof IntersectionObserver === 'function'
       ? new IntersectionObserver(
@@ -338,11 +356,15 @@ export function initGrainImages(selector = '[data-grain-image]') {
               const img = entry.target.querySelector('img');
               const run = () =>
                 whenIdle(() => {
-                  paint(entry.target)
-                    .then((done) => {
-                      if (done) painted.set(entry.target, entry.target.getBoundingClientRect().width);
-                    })
-                    .catch((error) => console.error('[portfolio] grain image', error));
+                  // the picture is still offscreen; do not paint over a scroll
+                  whenScrollSettled(() => {
+                    requested.add(entry.target);
+                    paint(entry.target)
+                      .then((done) => {
+                        if (done) painted.set(entry.target, entry.target.getBoundingClientRect().width);
+                      })
+                      .catch((error) => console.error('[portfolio] grain image', error));
+                  });
                 }, 600);
 
               if (!img) return;
@@ -356,27 +378,20 @@ export function initGrainImages(selector = '[data-grain-image]') {
 
   if (io) figures.forEach((figure) => io.observe(figure));
 
-  let timer = 0;
-  window.addEventListener(
-    'resize',
-    () => {
-      clearTimeout(timer);
-      timer = setTimeout(() => {
-        painted.forEach((width, figure) => {
-          if (!figure.isConnected) {
-            painted.delete(figure);
-            return;
-          }
-          const next = figure.getBoundingClientRect().width;
-          if (Math.abs(next - width) < 0.5) return;
-          paint(figure)
-            .then((done) => {
-              if (done) painted.set(figure, next);
-            })
-            .catch((error) => console.error('[portfolio] grain image', error));
-        });
-      }, 220);
-    },
-    { passive: true },
-  );
+  onLayout(() => {
+    requested.forEach((figure) => {
+      if (!figure.isConnected) {
+        requested.delete(figure);
+        painted.delete(figure);
+        return;
+      }
+      const next = figure.getBoundingClientRect().width;
+      if (Math.abs(next - (painted.get(figure) ?? -1)) < 0.5) return;
+      paint(figure)
+        .then((done) => {
+          if (done) painted.set(figure, next);
+        })
+        .catch((error) => console.error('[portfolio] grain image', error));
+    });
+  });
 }

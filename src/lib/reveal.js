@@ -5,59 +5,87 @@ import { DUR, DIST, EASE, STAGGER, forTravel } from './motion.js';
 export const reduced = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const timelines = new Map();
+const lineTriggers = [];
+let heroPlayed = false;
 
 function buildTimeline(el) {
   const lines = [...el.querySelectorAll('.ln__i')];
-  const count = lines.length;
-
-  if (!count) return null;
+  if (!lines.length) return null;
 
   const timeline = gsap.timeline({ paused: true });
   gsap.set(lines, { yPercent: DIST.line, opacity: 0 });
 
-  for (let i = 0; i < count; i += 1) {
+  lines.forEach((line, index) => {
     timeline.to(
-      lines[i],
+      line,
       { yPercent: 0, opacity: 1, duration: DUR.large, ease: EASE.out },
-      i * STAGGER.line,
+      index * STAGGER.line,
     );
-  }
+  });
 
   timelines.set(el, timeline);
   return timeline;
 }
 
-/** Each line rises after the previous one, on scroll. */
+function clearLineTriggers() {
+  lineTriggers.forEach((trigger) => trigger.kill());
+  lineTriggers.length = 0;
+  timelines.forEach((timeline) => timeline.kill());
+  timelines.clear();
+}
+
+/**
+ * Each line rises after the previous one, on scroll.
+ *
+ * The timelines hold the line elements they were built from, so they are
+ * rebuilt whenever the type is re-split (boot, resize, a late font). Without
+ * that, the old timeline kept animating detached nodes and the new lines never
+ * played at all.
+ */
 export function lineReveals() {
+  clearLineTriggers();
+
   document.querySelectorAll('[data-split]').forEach((el) => {
     const timeline = buildTimeline(el);
     if (!timeline) return;
+
+    // the hero is played by heroIntro once the curtain lifts, never on scroll
+    if (el.closest('.hero')) {
+      timeline.progress(heroPlayed || reduced() ? 1 : 0);
+      return;
+    }
 
     if (reduced()) {
       timeline.progress(1);
       return;
     }
 
-    // the hero is played by heroIntro once the curtain lifts, never on scroll
-    if (el.hasAttribute('data-intro') || el.closest('.hero')) return;
+    // already in the reading zone after a relayout: show it now rather than
+    // wait for a trigger that refresh does not replay
+    const shown = el.getBoundingClientRect().top < window.innerHeight * 0.92;
+    timeline.progress(shown ? 1 : 0);
 
-    ScrollTrigger.create({
-      trigger: el,
-      start: 'top 92%',
-      // every pass replays: lines rise as the block arrives, run back out as it
-      // leaves, from whichever direction it is entered
-      toggleActions: 'play reverse play reverse',
-      animation: timeline,
-    });
+    lineTriggers.push(
+      ScrollTrigger.create({
+        trigger: el,
+        start: 'top 92%',
+        // every pass replays: lines rise as the block arrives, run back out as
+        // it leaves, from whichever direction it is entered
+        toggleActions: 'play reverse play reverse',
+        animation: timeline,
+      }),
+    );
   });
 }
 
 /** Hero lines, played once the loader starts lifting. */
 export function playHero() {
+  heroPlayed = true;
   const el = document.querySelector('.hero [data-split]');
   const timeline = el && timelines.get(el);
   if (!timeline) return;
-  if (timeline.progress() === 0 && !timeline.isActive()) timeline.play();
+  if (reduced()) timeline.progress(1);
+  else if (timeline.progress() === 0 && !timeline.isActive()) timeline.play();
 }
 
 /** Everything smaller fades and rises. */

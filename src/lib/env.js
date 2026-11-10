@@ -80,6 +80,69 @@ export function whenIdle(callback, timeout = 1500) {
   return window.setTimeout(() => callback({ didTimeout: true, timeRemaining: () => 0 }), 1);
 }
 
+/* ---------- scroll-settled lazy work ---------- */
+
+let lastScroll = -Infinity;
+let settleTimer = 0;
+let settleQueue = [];
+
+function flushSettled() {
+  settleTimer = 0;
+  const jobs = settleQueue;
+  settleQueue = [];
+  // Stagger starts: several canvases beginning their setup in one task was a
+  // long frame of its own (each reads its whole bitmap back synchronously).
+  jobs.forEach((job, index) => {
+    if (index === 0) job();
+    else setTimeout(job, index * 120);
+  });
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener(
+    'scroll',
+    () => {
+      lastScroll = performance.now();
+      // only keep resetting the wait while a paint is actually waiting
+      if (settleTimer) {
+        clearTimeout(settleTimer);
+        settleTimer = setTimeout(flushSettled, 140);
+      }
+    },
+    { passive: true },
+  );
+}
+
+/**
+ * Lazy grain painting used to start in the middle of a scroll. Even chunked,
+ * those tasks pushed frames past 16ms. The blocks that schedule this work are
+ * still 400-600px outside the viewport, so waiting for a short quiet beat is
+ * invisible at normal speeds and keeps the scroll at 60fps.
+ */
+export function whenScrollSettled(callback) {
+  if (performance.now() - lastScroll > 140) {
+    callback();
+    return;
+  }
+  settleQueue.push(callback);
+  clearTimeout(settleTimer);
+  settleTimer = setTimeout(flushSettled, 140);
+}
+
+/**
+ * The paint loops yield through this instead of requestAnimationFrame. During
+ * a scroll it waits for the scroll to settle, so a paint that was already in
+ * flight pauses instead of taking a slice of every scrolled frame.
+ */
+export function paintPause() {
+  if (performance.now() - lastScroll > 140) return nextFrame();
+  return new Promise((resolve) => {
+    settleQueue.push(resolve);
+    clearTimeout(settleTimer);
+    settleTimer = setTimeout(flushSettled, 140);
+  });
+}
+
 
 /**
  * The expensive parts of the site are all visual: the per-pixel grain canvas,

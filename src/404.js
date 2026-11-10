@@ -1,10 +1,15 @@
 import { initScale } from './lib/scale.js';
+import { initLayout } from './lib/layout.js';
 import { initLinks } from './components/links.js';
 import { initClock } from './components/clock.js';
 import { initPageTransition } from './components/page-transition.js';
-import { initGrainText } from './lib/grain-text.js';
+import { initGrainText, renderGrainText } from './lib/grain-text.js';
 
-initScale();
+const applyScale = initScale();
+initLayout(() => {
+  applyScale();
+  renderGrainText();
+});
 initLinks();
 initClock();
 initPageTransition();
